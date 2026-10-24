@@ -1637,9 +1637,9 @@ function copySentence(text, btn){
 var synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
 /* Preferred voice names, best first. Order matters: earlier = preferred. */
 var VOICE_ORDER = {
-  ja:['O-Ren','Kyoko','Otoya','Hattori','Nanami','Haruka'],
-  ko:['Yuna','Sora','Heami','SunHi'],
-  en:['Evan','Samantha','Ava','Allison','Aaron','Google US','Nicky','Joelle','Jenny']
+  ja:['Otoya','Kyoko','Nanami','Haruka'],
+  ko:['Yuna','Sora','Heami'],
+  en:['Samantha','Ava','Allison','Aaron']
 };
 var HQ_RE = /Enhanced|Premium/i;     /* the Web Speech API exposes no quality flag: the NAME is the only hint */
 var TIER_TXT = ['preferred voice, Enhanced/Premium in its name', 'Enhanced/Premium in its name (not on your preferred list)', 'preferred voice name (no Enhanced/Premium in the name)', 'best on-device voice, not one of your preferred names', 'language match only (not an on-device voice)'];
@@ -1665,14 +1665,16 @@ function pickVoice(lang){
   var exact = vs.filter(function(v){ return vl(v) === want; });
   var pool = exact.length ? exact : vs.filter(function(v){ return vl(v).indexOf(base) === 0; });
   res.pool = pool; if(!pool.length) return res;
-  var best = null, bt = 9, br = 99;
+  /* A preferred name always wins, earliest name first (Otoya before Kyoko); Enhanced/Premium only breaks ties between copies of the same name.
+     Without any preferred name: Enhanced/Premium, then on-device, then anything. */
+  var best = null, bk = null;
   pool.forEach(function(v){
     var r = prefRank(base, v.name), h = HQ_RE.test(v.name || '');
-    var t = (r >= 0 && h) ? 0 : h ? 1 : r >= 0 ? 2 : v.localService ? 3 : 4;
-    if(r < 0) r = 98;
-    if(t < bt || (t === bt && r < br)){ best = v; bt = t; br = r; }
+    var key = r >= 0 ? [0, r, h ? 0 : 1] : [1, h ? 0 : v.localService ? 1 : 2, 0];
+    if(!bk || key[0] < bk[0] || (key[0] === bk[0] && (key[1] < bk[1] || (key[1] === bk[1] && key[2] < bk[2])))){ best = v; bk = key; }
   });
-  res.voice = best; res.tier = bt; return res;
+  var br2 = prefRank(base, best.name), bh = HQ_RE.test(best.name || '');
+  res.voice = best; res.tier = (br2 >= 0 && bh) ? 0 : br2 >= 0 ? 2 : bh ? 1 : best.localService ? 3 : 4; return res;
 }
 function voiceFor(lang){ return pickVoice(lang).voice; }
 if(synth){
@@ -1765,11 +1767,9 @@ function cloudSpeak(text, lang, rate, btn, tok, fallback){
 
 function speakLocal(text, rate, btn, lang, tok){
   try{
-    try{ synth.cancel(); }catch(e){}                   /* clears stalled playback; iOS can wedge otherwise */
-    if(synth.paused){ try{ synth.resume(); }catch(e){} }
     var u = new SpeechSynthesisUtterance(text);
     var pk = pickVoice(lang), v = pk.voice;
-    u.lang = lang;
+    u.lang = v && v.lang ? v.lang : lang;               /* lang must match the chosen voice exactly */
     if(v) u.voice = v;                                 /* assign the real SpeechSynthesisVoice, not just the language */
     else if(!warnedLang[lang.slice(0, 2)]){
       warnedLang[lang.slice(0, 2)] = 1;
@@ -1781,6 +1781,8 @@ function speakLocal(text, rate, btn, lang, tok){
     u.onstart = function(){ if(tok === speakToken && btn) btn.classList.add('speaking'); };
     u.onend = done;
     u.onerror = function(ev){ var er = ev && ev.error; if(er !== 'interrupted' && er !== 'canceled') logSpeechError('speech', String(er || 'unknown error') + ' (' + lang + ', ' + (v ? v.name : 'no voice') + ')'); done(); };
+    try{ synth.cancel(); }catch(e){}                   /* right before speak(): clears stalled audio and avoids iOS stutter */
+    if(synth.paused){ try{ synth.resume(); }catch(e){} }
     synth.speak(u);
   }catch(e){ logSpeechError('speech', String(e && e.message || e)); toast('Could not play audio'); }
 }
