@@ -303,8 +303,6 @@ option{background:var(--surface);color:var(--ink)}
 textarea{resize:vertical;line-height:1.45}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label,.field-label{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
-.check{display:flex;align-items:center;gap:12px;min-height:44px;font-size:14px;color:var(--body)}
-.check input{width:22px;height:22px;min-height:0;padding:0;accent-color:var(--ti);flex:none;box-shadow:none}
 .status{font-size:13px;color:var(--muted);min-height:20px;overflow-wrap:anywhere}
 .status.warn{color:var(--ti);font-weight:600}
 details.formats{font-size:14px;color:var(--muted);border-radius:16px;padding:4px 14px;background:var(--etch)}
@@ -413,7 +411,6 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
 .pick-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick-count{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
 .pick .i{color:var(--ti)}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .sheet h2{font-size:22px;font-weight:600;letter-spacing:-.035em;color:var(--ink)}
 .sheet-sub{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 select{
@@ -728,7 +725,6 @@ select{
     <!-- BUILD -->
     <section class="screen" id="screen-build" aria-label="Build cards" hidden>
       <h2>Build cards</h2>
-      <p class="lead">Paste words separated by commas or new lines, or paste a JSON list.</p>
       <div class="field">
         <label for="targetDeck">Add to deck</label>
         <select id="targetDeck"></select>
@@ -748,16 +744,7 @@ select{
         <textarea id="words" rows="7" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
           placeholder="ephemeral, resilient, scrutinize&#10;candid&#10;nuance"></textarea>
       </div>
-      <label class="check" for="lookup"><input type="checkbox" id="lookup" checked>Look up definitions and 繁體中文 online when available</label>
       <button class="btn primary" id="processBtn">Process Words into Cards</button>
-      <div class="field">
-        <p class="field-label">Fill with examples</p>
-        <div class="seg">
-          <button type="button" class="btn ghost small" data-action="sample" data-kind="en">English</button>
-          <button type="button" class="btn ghost small" data-action="sample" data-kind="ja" lang="ja">日本語</button>
-          <button type="button" class="btn ghost small" data-action="sample" data-kind="ko" lang="ko">한국어</button>
-        </div>
-      </div>
       <div class="bar" aria-hidden="true"><i id="buildBar"></i></div>
       <p class="status" id="buildStatus" role="status" aria-live="polite"></p>
       <details class="formats">
@@ -1186,18 +1173,6 @@ Object.keys(ZH_DEF).forEach(function(w){
 });
 var SAMPLE_SEED = ['ephemeral','resilient','meticulous','scrutinize','mitigate','serendipity','nuance','thoroughly'];
 var SEED_JA = ['曖昧','挑戦','約束','景色','懐かしい'], SEED_KO = ['열정','약속','경험','따뜻하다'];
-var SAMPLE_INPUT = 'ubiquitous, candid, pragmatic, collaborate, ambiguous, gregarious, ponder, vivid';
-var SAMPLE_JA = JSON.stringify([
-  {word:'曖昧', reading:'あいまい', lang:'ja-JP', pos:'adjective', definition:'Vague; ambiguous.',
-   examples:[{text:'それは曖昧な返事だった。', en:'That was an ambiguous reply.'}, {text:'彼の態度は曖昧だ。', en:'His attitude is vague.'}]},
-  {word:'挑戦', reading:'ちょうせん', lang:'ja-JP'}, '約束', '景色', '懐かしい', '勉強'
-], null, 1);
-var SAMPLE_KO = JSON.stringify([
-  {word:'열정', reading:'yeoljeong', lang:'ko-KR', pos:'noun', definition:'Passion; enthusiasm.',
-   examples:[{text:'그는 일에 대한 열정이 대단하다.', en:'He has great passion for his work.'}, {text:'열정이 있으면 못 할 일이 없다.', en:'With passion, there is nothing you cannot do.'}]},
-  {word:'약속', reading:'yaksok', lang:'ko-KR'}, '경험', '따뜻하다', '감사'
-], null, 1);
-
 /* ---------- sentence templates (used when no real example exists) ---------- */
 var TPL = {
   noun:["The {w} was the first thing everyone noticed.","Can you explain why the {w} matters so much here?","There was {a} {w} on the table when we arrived.","She wrote a short note about the {w} in her journal."],
@@ -1459,7 +1434,7 @@ var el = {
   calTitle:$('#calTitle'), calGrid:$('#calGrid'), calPrev:$('#calPrev'), calNext:$('#calNext'),
   studyMain:$('#studyMain'), studyEmpty:$('#studyEmpty'), banner:$('#sampleBanner'),
   deckPill:$('#deckPill'), deckPillName:$('#deckPillName'), deckPillCount:$('#deckPillCount'),
-  words:$('#words'), lookup:$('#lookup'), processBtn:$('#processBtn'),
+  words:$('#words'), processBtn:$('#processBtn'),
   targetDeck:$('#targetDeck'), newDeckField:$('#newDeckField'), newDeckName:$('#newDeckName'), newDeckLang:$('#newDeckLang'),
   buildBar:$('#buildBar'), buildStatus:$('#buildStatus'),
   manageDecks:$('#manageDecks'), manageCards:$('#manageCards'), deckList:$('#deckList'),
@@ -2857,7 +2832,7 @@ function processWords(){
     deckLang = tdeck.lang;
   }
   busy = true; el.processBtn.disabled = true; el.processBtn.textContent = 'Processing…';
-  var useApi = el.lookup.checked, api = {down:false, hits:0, trDown:false, zhHits:0};
+  var useApi = true, api = {down:false, hits:0, trDown:false, zhHits:0};
   var have = {}; (tdeck ? tdeck.cards : []).forEach(function(c){ if(!c.sample) have[c.word.toLowerCase()] = 1; });
   var list = items.slice(0, 300), made = [], dupes = 0, seen = {}, i = 0;
   function next(){
@@ -3734,11 +3709,6 @@ document.addEventListener('click', function(e){
     case 'copy-sent':
       if(cur()) copySentence(cur().sentences[+t.getAttribute('data-i')], t);
       break;
-    case 'sample':
-      var kind = t.getAttribute('data-kind');
-      el.words.value = kind === 'ja' ? SAMPLE_JA : kind === 'ko' ? SAMPLE_KO : SAMPLE_INPUT;
-      setStatus('Example added. Tap Process Words into Cards.', 0);
-      break;
     case 'again': grade(false); break;
     case 'good': grade(true); break;
     case 'continue-deck': {
@@ -3815,7 +3785,7 @@ document.addEventListener('click', function(e){
   }
 });
 document.addEventListener('click', function(e){
-  if(e.target.closest && e.target.closest('button, .tab, summary, label.check')) triggerHaptic(10);
+  if(e.target.closest && e.target.closest('button, .tab, summary')) triggerHaptic(10);
 }, true);
 /* long-press a speaker button -> slow, deliberate study speed */
 (function(){
