@@ -2688,7 +2688,13 @@ function normalizeObj(x){
   if(!ex.length && (x.sentence || x.sentence2)){          /* flat form: sentence/sentence2 with sentenceReading, sentenceRom, sentenceEn, sentenceZh ... */
     ['sentence', 'sentence2'].forEach(function(k){
       if(!x[k]) return;
-      ex.push({text:x[k], reading:x[k + 'Reading'], rom:x[k + 'Rom'], en:x[k + 'En'] || x[k + 'Translation'], zh:x[k + 'Zh']});
+      ex.push({
+        text: pickStr(x[k]),
+        reading: pickStr(x[k + 'Reading']),
+        rom: pickStr(x[k + 'Rom']),
+        en: pickStr(x[k + 'Meaning'] || x[k + 'En'] || x[k + 'Translation'] || x[k + 'MeaningEn']),
+        zh: pickStr(x[k + 'MeaningZh'] || x[k + 'Zh'] || x[k + 'TranslationZh'] || x[k + 'ZhTw'])
+      });
     });
   }
   return {
