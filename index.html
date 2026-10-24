@@ -11,7 +11,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600&display=swap">
 <style>
 :root{
   /* Layout: one-screen app. Header, a scrolling screen, a floating frosted tab deck.
@@ -28,20 +28,22 @@
   --font-ipa:system-ui,-apple-system,"Segoe UI","Noto Sans","Helvetica Neue",sans-serif;
   --font-ja:"Geist","Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
   --font-ko:"Geist","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --font-zh:"Geist","Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
   color-scheme:dark;
 }
 
 *,*::before,*::after{box-sizing:border-box}
-html,body{height:100%}
-html{background:var(--bg);touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
+html,body{height:100%;margin:0}
+/* Viewport lock: the document itself never scrolls or rubber-bands. Tabs and sheets scroll inside their own containers. */
+html{background:var(--bg);touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow:hidden;overscroll-behavior:none}
 body{
-  margin:0;
+  position:fixed;inset:0;width:100%;height:100%;height:100dvh;
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
   background:radial-gradient(120% 65% at 50% 40%,#171a24 0%,rgba(23,26,36,0) 62%),var(--bg);
   color:var(--body);
   font-family:var(--font-sans);font-size:16px;line-height:1.45;
-  overflow-x:hidden;overscroll-behavior-y:contain;
+  overflow:hidden;overscroll-behavior:none;
   -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
 }
 button{font:inherit;color:inherit;touch-action:manipulation}
@@ -107,9 +109,9 @@ h1,h2,p,ul{margin:0}
 }
 .count{text-transform:uppercase}
 .main{flex:1;min-height:0;position:relative}
-.screen{height:100%;display:flex;flex-direction:column;gap:12px;overflow-y:auto;overflow-x:hidden;padding-bottom:92px;-webkit-overflow-scrolling:touch}
+.screen{height:100%;display:flex;flex-direction:column;gap:12px;overflow-y:auto;overflow-x:hidden;padding-bottom:92px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .screen>*{flex-shrink:0}
-#screen-study{overflow:hidden}
+#screen-study{overflow:hidden;overscroll-behavior:none;touch-action:none}
 #studyMain{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 #studyMain>*{flex-shrink:0}
 #studyMain>.scene{flex:1 1 auto;flex-shrink:1}
@@ -153,7 +155,8 @@ h1,h2,p,ul{margin:0}
 .banner{padding:10px 14px;border-radius:14px;background:var(--etch);color:var(--body);font-size:13px}
 
 /* Card */
-.scene{position:relative;min-height:300px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.scene{position:relative;min-height:300px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+.drag,.card{touch-action:none}
 .drag{position:absolute;inset:0;perspective:1000px;transform-origin:50% 100%;will-change:transform}
 .scene.enter .drag{animation:enterIn .26s ease-out}
 @keyframes enterIn{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:none}}
@@ -176,10 +179,12 @@ h1,h2,p,ul{margin:0}
   grid-area:1/1;display:flex;flex-direction:column;min-height:0;min-width:0;
   background:linear-gradient(180deg,var(--surface-hi),var(--surface));border-radius:24px;
   box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.04);
-  padding:16px 20px 14px;overflow-y:auto;overflow-x:hidden;
+  padding:16px 20px 14px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:none;
   backface-visibility:hidden;-webkit-backface-visibility:hidden;
 }
 .face.back{transform:rotateY(180deg)}
+/* Only a face whose content really overflows may pan vertically (native momentum scroll, contained). Horizontal swipes still reach the deck. */
+.face.scrolls{touch-action:pan-y;-webkit-overflow-scrolling:touch}
 .face-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--etch-line)}
 .face-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .face-body{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
@@ -187,12 +192,21 @@ h1,h2,p,ul{margin:0}
 .back-body{padding-top:16px}
 [lang="ja"]{font-family:var(--font-ja)}
 [lang="ko"]{font-family:var(--font-ko);word-break:keep-all}
+[lang="zh-Hant"]{font-family:var(--font-zh);line-height:1.5}
 .reading{font-size:20px;font-weight:500;letter-spacing:.06em;line-height:1.2;color:var(--ti-dim);max-width:100%;overflow-wrap:anywhere}
 .term[lang="ja"],.term[lang="ko"]{letter-spacing:0;line-height:1.15}
 .term{font-weight:600;line-height:1.02;letter-spacing:-.035em;color:var(--ink);overflow-wrap:anywhere;max-width:100%}
 .phon{font-family:var(--font-ipa);color:var(--muted);font-size:17px}
 .def{font-size:21px;line-height:1.35;font-weight:500;letter-spacing:-.015em;color:var(--ink)}
 .def.empty{color:var(--muted);font-style:italic;font-size:17px;font-weight:400}
+.defs{display:flex;flex-direction:column;gap:10px}
+.defb{display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-radius:16px;background:var(--etch);border:1px solid var(--etch-line)}
+.deftag{align-self:flex-start;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ti);padding:2px 8px;border-radius:999px;border:1px solid rgba(226,217,200,.28);background:rgba(226,217,200,.06)}
+.defb .def{font-size:19px;overflow-wrap:anywhere}
+.defb .def-en{font-size:17px;font-weight:400;color:var(--body)}
+.defb .def.empty{font-size:15px}
+.back-reading{font-size:17px;font-weight:500;letter-spacing:.05em;color:var(--ti-dim);overflow-wrap:anywhere}
+.ex li p.ex-zh{font-size:14px;line-height:1.5;color:var(--body)}
 .ex{list-style:none;padding:0;display:flex;flex-direction:column;gap:10px}
 .ex li{display:flex;gap:10px;align-items:flex-start;padding:12px 8px 12px 14px;background:var(--etch);border-radius:16px;border-color:rgba(255,255,255,.06);border-top-color:rgba(255,255,255,.08);border-bottom-color:rgba(0,0,0,.3)}
 .ex-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
@@ -210,6 +224,7 @@ mark{background:rgba(226,217,200,.1);color:var(--ti);padding:0 2px;border-radius
 .speak.copy{color:var(--body)}
 .speak.copy.copied{color:var(--ti);border-color:rgba(226,217,200,.4);border-top-color:rgba(226,217,200,.55)}
 .speak.big{width:72px;height:72px;box-shadow:0 14px 24px -12px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 6px rgba(255,255,255,.025)}
+.speak{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .speak.speaking{animation:pulse .8s ease-in-out infinite;box-shadow:0 0 18px rgba(226,217,200,.35),inset 0 1px 0 rgba(255,255,255,.07)}
 @keyframes pulse{50%{opacity:.6}}
 
@@ -322,7 +337,7 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
 /* Editor sheet */
 .sheet-backdrop{position:fixed;inset:0;z-index:50;background:rgba(4,5,8,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding-top:env(safe-area-inset-top,0px)}
 .sheet{
-  width:100%;max-width:560px;max-height:94%;overflow-y:auto;background:linear-gradient(180deg,var(--surface-hi),var(--surface));color:var(--body);
+  width:100%;max-width:560px;max-height:94%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,var(--surface-hi),var(--surface));color:var(--body);
   border-radius:28px 28px 0 0;box-shadow:0 -20px 40px -20px rgba(0,0,0,.8);
   padding-top:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));
@@ -367,6 +382,9 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
   font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;line-height:1;white-space:nowrap;
   padding:6px 10px;border-radius:999px;color:var(--ti);background:rgba(226,217,200,.08);border:1px solid rgba(226,217,200,.28);
 }
+.lang-tag{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:5px 10px;border-radius:999px;border:1px solid var(--etch-line);background:var(--etch);color:var(--ti);font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.06em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.lang-tag i{font-style:normal;opacity:.6}
+.lang-tag:active{transform:scale(.96)}
 .deck-meta{font-family:var(--font-mono);font-size:12px;letter-spacing:.04em;color:var(--muted)}
 .deck-warn{font-size:13px;color:var(--ti)}
 .deck-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -381,6 +399,12 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
   border:1px solid var(--edge-side);border-top-color:var(--edge-top);border-bottom-color:var(--edge-bot);
 }
 .pick.is-active{color:var(--ti);border-color:rgba(226,217,200,.3);border-top-color:rgba(226,217,200,.45)}
+.due-chip{flex:none;display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.04em;padding:3px 8px;border-radius:999px;white-space:nowrap;color:var(--ti);background:var(--etch);border:1px solid var(--etch-line)}
+.due-chip.done{color:#fde68a;background:rgba(245,158,11,.1);border-color:rgba(252,211,77,.4)}
+.deck.is-done h3,.pick.is-done .pick-name{opacity:.62}
+.deck.is-done{border-color:rgba(252,211,77,.18)}
+.deck-top .due-chip{margin-left:auto}
+.deck-top .due-chip + .chip-active,.deck-top .chip-active + .due-chip{margin-left:8px}
 .pick-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick-count{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
 .pick .i{color:var(--ti)}
@@ -397,8 +421,232 @@ select{
   .controls .flip-btn{grid-column:1/-1;order:-1}
   .two{grid-template-columns:1fr}
 }
+/* ---- language expedition: header pills + map ---- */
+.top{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;justify-content:normal;gap:8px}
+.brand{justify-self:start;grid-column:1}
+.exp-pills{grid-column:2;display:flex;align-items:center;justify-content:center;gap:4px}
+.streak-cluster{grid-column:3;justify-self:end}
+.pill-btn{min-width:44px;min-height:44px;padding:0;border:0;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.pill-in{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 8px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025));border:1px solid var(--etch-line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);color:var(--ti);font-family:var(--font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;
+  transition:transform .12s ease,border-color .2s ease}
+.pill-in .fl{font-size:13px;line-height:1}
+.pill-btn:active .pill-in{transform:scale(.95)}
+@media (max-width:459px){ .brand,.cal-btn{display:none} }
+@media (max-width:374px){
+  .top{grid-template-columns:0 minmax(0,1fr) auto;gap:6px}
+  .pill-btn{min-width:40px}
+  .pill-in{padding:0 6px;font-size:11px;gap:3px}
+}
+.map-overlay{position:fixed;inset:0;z-index:55;display:flex;flex-direction:column;outline:none;
+  background:radial-gradient(120% 55% at 50% 0%,#171a25 0%,var(--bg) 62%);padding-top:env(safe-area-inset-top,0px)}
+.map-inner{width:100%;max-width:560px;margin:0 auto;flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.map-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px max(16px,env(safe-area-inset-right,0px)) 4px max(16px,env(safe-area-inset-left,0px))}
+.map-head h2{font-size:20px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
+.map-head .acts{display:flex;gap:2px}
+.map-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.mtab{min-height:56px;border-radius:16px;border:1px solid var(--etch-line);background:var(--etch);color:var(--muted);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;font-family:var(--font-mono);font-size:11px;letter-spacing:.02em;line-height:1}
+.mtab b{font-size:14px;font-weight:600;color:var(--body);font-variant-numeric:tabular-nums}
+.mtab.is-on{border-color:rgba(226,217,200,.55);background:linear-gradient(180deg,rgba(226,217,200,.12),rgba(226,217,200,.04));color:var(--ti);box-shadow:0 0 18px -6px rgba(226,217,200,.4)}
+.mtab.is-on b{color:var(--ti)}
+.map-stats{padding:10px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;color:var(--muted);text-align:center;line-height:1.5}
+.map-stats b{color:var(--ti);font-weight:600}
+.map-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;position:relative;
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%)}
+.map-track{position:relative;width:100%;background-color:#0b0d24;background-size:6px 6px,6px 6px,100% 100%;background-repeat:repeat,repeat,no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated}
+.map-track::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px),radial-gradient(120% 60% at 50% 50%,transparent 55%,rgba(0,0,0,.35) 100%);z-index:0}
+.mpath-shadow{fill:none;stroke:rgba(0,0,0,.6);stroke-width:8;stroke-linecap:round}
+.map-track svg{position:absolute;left:0;top:0;display:block;pointer-events:none}
+.mpath-base{fill:none;stroke:rgba(255,255,255,.55);stroke-width:3;stroke-dasharray:2 8;stroke-linecap:square}
+.mpath-lit{fill:none;stroke:url(#mgrad);stroke-width:3.5;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(252,211,77,.45))}
+.mstar{fill:rgba(255,255,255,.35)}
+.mzone{position:absolute;left:0;right:0;height:0;display:flex;align-items:center;gap:10px;padding:0 14px}
+.mzone::before,.mzone::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(226,217,200,.3))}
+.mzone::after{transform:scaleX(-1)}
+.mzone span{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--ti);background:var(--bg);padding:7px 11px;border-radius:999px;border:1px solid var(--etch-line);white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.mzone.is-lock span{color:var(--graphite)}
+.mnode{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;color:inherit}
+.mnode .disc{position:absolute;inset:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .15s ease}
+.mnode:active .disc{transform:scale(.93)}
+.mnode.is-done .disc{background:radial-gradient(circle at 35% 28%,#262936,#0d0f14 72%);color:#f3e5ab;border:1.5px solid rgba(226,217,200,.6);
+  box-shadow:0 0 0 3px rgba(226,217,200,.06),0 0 18px rgba(226,217,200,.3),inset 0 1px 0 rgba(255,255,255,.14)}
+.mnode.is-cur .disc{inset:2px;background:radial-gradient(circle at 35% 28%,#fff3c4,#eab94a 55%,#b8862a);color:#1b1405;border:1.5px solid #fde68a;
+  box-shadow:0 0 24px rgba(252,211,77,.55),0 0 0 4px rgba(252,211,77,.12);font-family:var(--font-mono);font-weight:700;font-size:20px}
+.mnode.is-lock .disc{background:rgba(255,255,255,.035);border:1px dashed rgba(255,255,255,.16);color:var(--graphite)}
+.mnode.is-sel .disc{outline:2px solid var(--ti);outline-offset:3px}
+.mnode:focus-visible{outline:none}
+.mnode:focus-visible .disc{outline:2px solid var(--ti);outline-offset:3px}
+.radar{position:absolute;inset:2px;border-radius:50%;border:1.5px solid rgba(125,211,252,.75);pointer-events:none;animation:radar 2.6s cubic-bezier(.2,.6,.3,1) infinite}
+.radar.r2{animation-delay:1.3s}
+@keyframes radar{0%{transform:scale(1);opacity:.85}100%{transform:scale(2.3);opacity:0}}
+.mpin{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;white-space:nowrap;pointer-events:none;
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#1b1405;padding:5px 9px;border-radius:999px;
+  background:linear-gradient(180deg,#fde68a,#e8b53f);box-shadow:0 4px 14px -2px rgba(252,211,77,.5);animation:bob 2s ease-in-out infinite}
+.mpin::after{content:"";position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#e8b53f}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-4px)}}
+.mlabel{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:-1px;width:116px;text-align:center;pointer-events:none;line-height:1.25}
+.mlabel b{display:block;font-size:12.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.mlabel small{display:block;font-family:var(--font-mono);font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.mlabel b,.mlabel small{text-shadow:1px 0 #000,-1px 0 #000,0 1px #000,0 -1px #000,1px 1px #000,-1px -1px #000,0 0 8px #000}
+.mnode.is-lock .mlabel b{color:var(--graphite)}
+.mnode.is-lock .mlabel small{color:#5c6170}
+.inspect{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:3;max-height:62%;overflow-y:auto;overscroll-behavior:contain;
+  padding:16px;border-radius:22px;background:linear-gradient(180deg,rgba(30,32,42,.94),rgba(16,18,25,.97));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.1);border-top-color:var(--edge-top);box-shadow:0 24px 48px -12px rgba(0,0,0,.85);display:flex;flex-direction:column;gap:10px;animation:rise .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.ins-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ins-title{font-size:19px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
+.ins-range{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:3px;letter-spacing:.02em}
+.ins-lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ins-desc{font-size:14.5px;line-height:1.5;color:var(--body)}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--etch-line)}
+.chip.done{color:#f3e5ab;border-color:rgba(226,217,200,.45);background:rgba(226,217,200,.08)}
+.chip.cur{color:#1b1405;border-color:#fde68a;background:linear-gradient(180deg,#fde68a,#e8b53f)}
+.chip.lock{color:var(--graphite);background:var(--etch)}
+.pbar{height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.pbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#e2d9c8,#fcd34d)}
+.ins-rem{font-size:12.5px;color:var(--muted)}
+.ins-rem b{color:var(--ti);font-family:var(--font-mono);font-weight:600}
+/* ---- three-flame altar ---- */
+.tabs{grid-template-columns:repeat(4,1fr)}
+.altar{display:flex;flex-direction:column;align-items:center;width:100%;flex:1 0 auto;padding:clamp(4px,1.5vh,16px) 0 clamp(6px,2vh,18px)}
+.altar-top{flex:0.45 1 auto;width:100%;display:flex;align-items:center;justify-content:center;padding:clamp(4px,2vh,24px) 0}
+.altar-low{flex:1 1 auto;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.grand{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.gf{position:relative;width:140px;height:140px;border:0;background:none;padding:0;cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+.gf-halo{position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,0) 40%,rgba(245,158,11,0) 70%);pointer-events:none;transition:background .5s ease}
+.gf-core{position:absolute;inset:14px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#2b2e3b,#0a0b0f 72%);border:1.5px solid rgba(226,217,200,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 14px 30px -12px rgba(0,0,0,.95);transition:box-shadow .5s ease,border-color .5s ease}
+.gf-flame{position:relative;width:62px;height:62px;color:#4d5262;fill:rgba(0,0,0,.35);transition:color .4s ease,fill .4s ease;stroke-width:1.5}
+.ember{position:absolute;width:5px;height:5px;border-radius:50%;background:#7a5b2e;opacity:.55;animation:ember 3.2s ease-in-out infinite}
+.ember.e1{left:34%;bottom:26%}.ember.e2{left:58%;bottom:22%;animation-delay:1.1s;width:4px;height:4px}.ember.e3{left:47%;bottom:18%;animation-delay:2s;width:3px;height:3px}
+@keyframes ember{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:.75;transform:translateY(-3px)}}
+.grand.lit .gf-halo{background:radial-gradient(circle,rgba(245,158,11,.28) 40%,rgba(245,158,11,0) 72%);animation:halo 2.4s ease-in-out infinite}
+.grand.lit .gf-core{border-color:rgba(252,211,77,.85);box-shadow:0 0 38px 4px rgba(245,158,11,.5),0 0 80px 14px rgba(245,158,11,.22),inset 0 0 24px rgba(245,158,11,.4)}
+.grand.lit .gf-flame{color:#fcd34d;fill:rgba(245,158,11,.9);filter:drop-shadow(0 0 10px rgba(252,211,77,.9));animation:flicker 1.7s ease-in-out infinite}
+.grand.lit .ember{display:none}
+@keyframes halo{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes flicker{0%,100%{transform:scale(1) rotate(0)}30%{transform:scale(1.05) rotate(-1.5deg)}60%{transform:scale(.98) rotate(1deg)}}
+.grand-count{font-family:var(--font-mono);font-size:30px;font-weight:600;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.grand-count small{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-left:6px}
+.grand.lit .grand-count{color:#fcd34d}
+.grand-status{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.grand.lit .grand-status{color:#f3e5ab}
+.conduits{display:block;width:100%;max-width:420px;flex:1 1 auto;min-height:76px;max-height:320px;overflow:visible}
+.cond{fill:none;stroke:rgba(255,255,255,.14);stroke-width:2;stroke-dasharray:2 8;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.cond.lit{stroke:#fcd34d;stroke-dasharray:7 9;filter:drop-shadow(0 0 4px rgba(252,211,77,.7));animation:flow 1.1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-32}}
+.orbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:420px}
+.orb{display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 2px;background:none;border:0;cursor:pointer;color:inherit;min-width:0;-webkit-tap-highlight-color:transparent}
+.orb-disc{width:clamp(78px,11vh,100px);height:clamp(78px,11vh,100px);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:radial-gradient(circle at 35% 28%,#22252f,#0f1116 72%);border:1.5px solid var(--etch-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 20px -10px rgba(0,0,0,.9);
+  transition:transform .15s ease,box-shadow .4s ease,border-color .4s ease;filter:saturate(.55)}
+.orb:active .orb-disc{transform:scale(.94)}
+.orb-disc .fl{font-size:30px;line-height:1;opacity:.75}
+.orb.lit .orb-disc{border-color:rgba(252,211,77,.9);filter:none;background:radial-gradient(circle at 35% 28%,#443a20,#15120a 72%);
+  box-shadow:0 0 28px 2px rgba(245,158,11,.55),inset 0 0 18px rgba(245,158,11,.3)}
+.orb.lit .orb-disc .fl{opacity:1}
+.orb-code{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
+.orb.lit .orb-code{color:#fcd34d}
+.orb-hrs{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.orb-pill{font-family:var(--font-mono);font-size:9.5px;line-height:1.4;padding:3px 7px;border-radius:999px;border:1px solid var(--etch-line);background:var(--etch);color:var(--muted);text-align:center}
+.orb-pill span{display:inline-block;white-space:nowrap}
+.orb.lit .orb-pill{color:#f3e5ab;border-color:rgba(252,211,77,.4);background:rgba(245,158,11,.1)}
+/* ---- ritual portal ---- */
+.portal{position:fixed;inset:0;z-index:55;display:flex;flex-direction:column;outline:none;background:radial-gradient(120% 55% at 50% 0%,#191c27 0%,var(--bg) 62%);padding-top:env(safe-area-inset-top,0px)}
+.portal-inner{width:100%;max-width:560px;margin:0 auto;flex:1;min-height:0;display:flex;flex-direction:column}
+.portal-top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:6px;padding:8px max(12px,env(safe-area-inset-right,0px)) 4px max(12px,env(safe-area-inset-left,0px))}
+.portal-top h2{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--ink);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.portal-scroll{overflow-x:hidden;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.p-emblem{position:relative;width:112px;height:112px;margin:10px auto 0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:radial-gradient(circle at 35% 28%,#252835,#0b0c10 72%);border:1.5px solid rgba(226,217,200,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 14px 28px -12px #000}
+.p-emblem .fl{font-size:36px;line-height:1}
+.p-emblem .p-code{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--ti)}
+.p-emblem{transition:box-shadow .5s ease,border-color .5s ease}
+#portalBody{padding-top:16px}
+.p-ring{position:absolute;left:-10px;top:-10px;width:calc(100% + 20px);height:calc(100% + 20px);transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.p-ring circle{fill:none;stroke-width:4}
+.p-ring .rt{stroke:rgba(255,255,255,.09)}
+.p-ring .rp{stroke:#f6c34a;stroke-linecap:round;transition:stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1),opacity .3s ease;filter:drop-shadow(0 0 4px rgba(245,158,11,.7))}
+.p-ring.full .rp{stroke:#fde68a;filter:drop-shadow(0 0 7px rgba(252,211,77,.95)) drop-shadow(0 0 16px rgba(245,158,11,.6))}
+.p-emblem::before{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid rgba(253,230,138,.95);opacity:0;pointer-events:none}
+.p-emblem.impact::before{animation:impactRing .7s ease-out 1}
+@keyframes impactRing{0%{transform:scale(1);opacity:.95}100%{transform:scale(1.75);opacity:0}}
+@keyframes impactPulse{0%{transform:scale(1)}35%{transform:scale(1.07)}100%{transform:scale(1)}}
+.p-emblem.lit{border-color:rgba(252,211,77,.9);box-shadow:0 0 40px 4px rgba(245,158,11,.55),0 0 80px 14px rgba(245,158,11,.22),inset 0 0 22px rgba(245,158,11,.35)}
+.p-emblem.ignite::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid #fcd34d;animation:ignite 1s ease-out 1}
+@keyframes ignite{0%{transform:scale(.9);opacity:1}100%{transform:scale(2.2);opacity:0}}
+.p-emblem.ignite{animation:igniteCore .9s ease-out 1}
+.p-emblem.impact{animation:impactPulse .45s ease-out 1}
+.p-emblem.impact.ignite{animation:igniteCore .9s ease-out 1}
+@keyframes igniteCore{0%{transform:scale(1)}30%{transform:scale(1.14)}100%{transform:scale(1)}}
+.pconduits{display:block;width:100%;height:46px;margin:0;overflow:visible;pointer-events:none}
+.pconduits path.cd{fill:none;stroke:rgba(226,217,200,.28);stroke-width:1.6;stroke-dasharray:3 5;stroke-linecap:round;transition:stroke .4s ease}
+.pconduits path.sg{fill:none;stroke:#fff3c4;stroke-width:3.6;stroke-linecap:round;opacity:0;filter:drop-shadow(0 0 5px #fcd34d) drop-shadow(0 0 12px rgba(245,158,11,.95));will-change:stroke-dashoffset}
+.pconduits path.cd.lit{stroke:#fde68a;stroke-width:2.4;stroke-dasharray:7 5;filter:drop-shadow(0 0 5px rgba(252,211,77,.95)) drop-shadow(0 0 12px rgba(34,211,238,.45));animation:flow .9s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-24}}
+.chambers{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px;align-items:stretch;margin-top:0}
+.pcol{display:flex;flex-direction:column;gap:10px;min-width:0}
+.merc{position:relative;height:252px;border-radius:26px;overflow:hidden;touch-action:none;cursor:ns-resize;outline:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  background:linear-gradient(180deg,#171921,#0d0e13);border:1px solid var(--etch-line);border-top-color:var(--edge-top);box-shadow:0 14px 28px -16px #000,inset 0 1px 0 rgba(255,255,255,.04);transition:box-shadow .4s ease,border-color .4s ease}
+.merc:focus-visible{outline:2px solid var(--ti);outline-offset:3px}
+.merc-tube{position:absolute;inset:0}
+.merc-fill{position:absolute;left:0;right:0;top:0;bottom:0;will-change:transform;background:linear-gradient(180deg,#d99a28,#7a4d0e);opacity:.92;transition:transform .22s ease}
+.merc.dragging .merc-fill{transition:none}
+.merc-tube{touch-action:none}
+.merc-fill::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,236,170,.85);box-shadow:0 0 12px 2px rgba(252,211,77,.7)}
+.merc.met{border-color:rgba(252,211,77,.75);box-shadow:0 0 32px -4px rgba(245,158,11,.65),0 14px 28px -16px #000}
+.merc.met .merc-fill{opacity:1;background:linear-gradient(180deg,#fde68a,#f59e0b 60%,#c97a0a)}
+.merc-cap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:18px 8px 16px;pointer-events:none;text-align:center}
+.merc-top{align-self:stretch;display:flex;align-items:center;justify-content:space-between;padding:0 4px 0 6px}
+.merc-reset{pointer-events:auto;width:30px;height:30px;margin:-6px -2px 0 0;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.75);background:rgba(10,11,15,.4);border:1px solid rgba(255,255,255,.14);cursor:pointer;transition:opacity .2s,transform .12s,background .2s}
+.merc-reset:active{transform:scale(.88);background:rgba(255,255,255,.14)}
+.merc-reset:disabled{opacity:.28;pointer-events:none}
+.merc-title{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.8);text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.merc-read{font-family:var(--font-mono);font-size:17px;font-weight:700;color:#fff;white-space:nowrap;font-variant-numeric:tabular-nums;padding:7px 12px;border-radius:14px;background:rgba(10,11,15,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.merc-check{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#1b1405;background:linear-gradient(180deg,#fff3c4,#fcd34d);box-shadow:0 0 16px rgba(252,211,77,.8);opacity:0;transform:scale(.6);transition:opacity .25s ease,transform .25s ease}
+.merc.met .merc-check{opacity:1;transform:none}
+.vcard{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 8px;min-height:64px;padding:10px 14px;border-radius:20px;cursor:pointer;color:var(--ink);text-align:left;
+  background:linear-gradient(180deg,#1c1f28,#12141a);border:1px solid var(--etch-line);border-top-color:var(--edge-top);box-shadow:0 10px 20px -14px #000;-webkit-tap-highlight-color:transparent;transition:transform .12s ease,box-shadow .3s ease,border-color .3s ease}
+.vcard:active{transform:scale(.97)}
+.vcard b{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.vbadge{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:11px;font-weight:600;padding:5px 9px;border-radius:999px;background:rgba(226,217,200,.1);border:1px solid rgba(226,217,200,.25);color:var(--ti);white-space:nowrap}
+.vcard.done{border-color:rgba(252,211,77,.55);box-shadow:0 0 24px -8px rgba(245,158,11,.55)}
+.vcard.done .vbadge{color:#1b1405;background:linear-gradient(180deg,#fde68a,#e8b53f);border-color:#fde68a}
+.out-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:26px;cursor:pointer;color:var(--ink);min-width:0;
+  background:linear-gradient(180deg,#171921,#0d0e13);border:1px solid var(--etch-line);border-top-color:var(--edge-top);box-shadow:0 14px 28px -16px #000;transition:transform .12s ease,box-shadow .35s ease,border-color .35s ease;-webkit-tap-highlight-color:transparent}
+.out-card{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;--chg:0}
+.out-card.holding{transform:scale(.98)}
+.out-ring{position:relative;overflow:visible}
+.out-ring::before{content:"";position:absolute;inset:-9px;border-radius:50%;background:conic-gradient(#fcd34d calc(var(--chg)*1turn),rgba(255,255,255,.08) 0);-webkit-mask:radial-gradient(circle,transparent 0 calc(50% - 3px),#000 calc(50% - 2px));mask:radial-gradient(circle,transparent 0 calc(50% - 3px),#000 calc(50% - 2px));opacity:calc(.35 + var(--chg)*.65);filter:drop-shadow(0 0 calc(var(--chg)*10px) rgba(245,158,11,.9))}
+.out-ring::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,236,170,.95),rgba(245,158,11,.55) 60%,transparent 72%);opacity:calc(var(--chg)*.9);transform:scale(calc(.4 + var(--chg)*.6));pointer-events:none}
+.out-ring svg{position:relative;z-index:1}
+.out-hint{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.0;transition:opacity .2s}
+.out-card.holding .out-hint{opacity:.9}
+.spark{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px 2px rgba(245,158,11,.9);pointer-events:none;z-index:3;animation:spark .8s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes spark{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.out-ring{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:radial-gradient(circle at 35% 28%,#2f3340,#14161d);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 20px -10px #000;transition:all .35s ease}
+.out-label{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.out-badge{position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#1b1405;background:linear-gradient(180deg,#fff3c4,#fcd34d);box-shadow:0 0 14px rgba(252,211,77,.8);opacity:0;transform:scale(.6);transition:opacity .25s ease,transform .25s ease}
+.out-card[aria-pressed="true"]{border-color:rgba(252,211,77,.8);box-shadow:0 0 34px -4px rgba(245,158,11,.6),0 14px 28px -16px #000}
+.out-card[aria-pressed="true"] .out-ring{color:#1b1405;background:radial-gradient(circle at 35% 28%,#fff3c4,#e9b949);border-color:#fff3c4;box-shadow:0 0 28px rgba(252,211,77,.75)}
+.out-card[aria-pressed="true"] .out-badge{opacity:1;transform:none}
+.stepper{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;gap:10px}
+.stepper .icon-btn{min-width:56px;min-height:56px;border-radius:18px;border:1px solid var(--etch-line);background:var(--etch)}
+.tgt-val{text-align:center;display:flex;flex-direction:column;gap:2px}
+.tgt-val b{font-family:var(--font-mono);font-size:38px;font-weight:600;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.tgt-val span{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chips button{min-height:44px;min-width:56px;padding:0 12px;border-radius:999px;border:1px solid var(--etch-line);background:var(--etch);color:var(--body);font-family:var(--font-mono);font-size:13px;font-weight:600;cursor:pointer}
+.chips button.is-on{border-color:rgba(226,217,200,.6);color:var(--ti);background:rgba(226,217,200,.1)}
+.tgt-copy{font-size:13.5px;line-height:1.5;color:var(--muted)}
+#targetSheet{z-index:58}
 @media (prefers-reduced-motion:reduce){
   .card{transition:none}
+  .gf-flame,.ember,.cond.lit,.grand.lit .gf-halo,.p-emblem.ignite,.p-emblem.ignite::after{animation:none}
+    .radar,.mpin,.inspect{animation:none}
   .scene.enter .drag,.speak.speaking,.done.celebrate>*,.streak-badge.lit .flame svg,.flame.pop svg,.cloud-status .dot{animation:none}
   .done.celebrate>*{opacity:1}
   .bar i,.toast,.btn,.icon-btn,.tab,.speak,.deck-pill,.pick{transition:none}
@@ -409,6 +657,11 @@ select{
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><h1>Wordstack</h1></div>
+    <div class="exp-pills" role="group" aria-label="Words mastered per language. Open the expedition map">
+      <button class="pill-btn" data-action="open-map" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="pill-ja">0</span></span></button>
+      <button class="pill-btn" data-action="open-map" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="pill-ko">0</span></span></button>
+      <button class="pill-btn" data-action="open-map" data-lang="en" aria-haspopup="dialog" aria-label="English: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="pill-en">0</span></span></button>
+    </div>
     <div class="streak-cluster">
       <button class="streak-badge" id="streakBadge" data-action="open-streak" aria-haspopup="dialog">
         <span class="flame" id="flame" data-icon="flame"></span><span class="streak-num" id="streakNum">0</span>
@@ -418,8 +671,13 @@ select{
   </header>
 
   <main class="main">
+    <!-- ALTAR -->
+    <section class="screen" id="screen-altar" aria-label="Three-Flame Altar">
+      <div class="altar" id="altarBody"></div>
+    </section>
+
     <!-- STUDY -->
-    <section class="screen" id="screen-study" aria-label="Study">
+    <section class="screen" id="screen-study" aria-label="Study" hidden>
       <button class="deck-pill" id="deckPill" data-action="open-picker" aria-haspopup="dialog">
         <span data-icon="folder"></span><span class="deck-pill-name" id="deckPillName"></span><span class="deck-pill-count" id="deckPillCount"></span><span data-icon="chevron-down"></span>
       </button>
@@ -452,12 +710,13 @@ select{
         <h2 id="doneTitle">All caught up</h2>
         <p id="doneText"></p>
         <div class="done-stats" id="doneStats"></div>
-        <button class="btn primary" data-action="review-all"><span data-icon="refresh"></span>Review All Cards Anyway</button>
+        <button class="btn primary" id="doneNext" data-action="continue-deck" hidden><span data-icon="right"></span><span id="doneNextText"></span></button>
+        <button class="btn primary" id="doneReview" data-action="review-all"><span data-icon="refresh"></span>Review All Cards Anyway</button>
       </div>
       <div class="empty-state" id="studyEmpty" hidden>
-        <h2>This deck is empty</h2>
-        <p>Paste a list of words and Wordstack turns each one into a card in this deck.</p>
-        <button class="btn primary" data-tab="build"><span data-icon="plus"></span>Add words</button>
+        <h2 id="studyEmptyTitle">This deck is empty</h2>
+        <p id="studyEmptyText">Paste a list of words and Wordstack turns each one into a card in this deck.</p>
+        <button class="btn primary" id="studyEmptyBtn" data-tab="build"><span data-icon="plus"></span><span id="studyEmptyBtnText">Add words</span></button>
       </div>
     </section>
 
@@ -475,7 +734,7 @@ select{
           <input id="newDeckName" maxlength="40" autocomplete="off" placeholder="e.g. Japanese N3">
         </div>
         <div class="field">
-          <label for="newDeckLang">Speech language</label>
+          <label for="newDeckLang">Language (speech &amp; expedition)</label>
           <select id="newDeckLang"></select>
         </div>
       </div>
@@ -484,7 +743,7 @@ select{
         <textarea id="words" rows="7" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
           placeholder="ephemeral, resilient, scrutinize&#10;candid&#10;nuance"></textarea>
       </div>
-      <label class="check" for="lookup"><input type="checkbox" id="lookup" checked>Look up definitions online when available</label>
+      <label class="check" for="lookup"><input type="checkbox" id="lookup" checked>Look up definitions and 繁體中文 online when available</label>
       <button class="btn primary" id="processBtn">Process Words into Cards</button>
       <div class="field">
         <p class="field-label">Fill with examples</p>
@@ -505,7 +764,8 @@ select{
     "pos": "noun",
     "phonetic": "/ˈnuː.ɑːns/",
     "definition": "A subtle difference.",
-    "examples": ["First sentence.", "Second sentence."]
+    "definitionZh": "細微差別",
+    "examples": ["First sentence.", {"text": "Second.", "en": "English", "zh": "繁體中文"}]
   }
 ]</pre>
         <p style="padding-bottom:12px">Every field except <b>word</b> is optional. Missing parts are filled from the dictionary, the built-in word list, or an editable template.</p>
@@ -594,6 +854,7 @@ service cloud.firestore {
   </main>
 
   <nav class="tabs" aria-label="Sections">
+    <button class="tab" data-tab="altar"><span data-icon="flame"></span>Altar</button>
     <button class="tab" data-tab="study"><span data-icon="layers"></span>Study</button>
     <button class="tab" data-tab="build"><span data-icon="plus-circle"></span>Build</button>
     <button class="tab" data-tab="manage"><span data-icon="folder"></span>Decks</button>
@@ -609,7 +870,7 @@ service cloud.firestore {
     <form id="editForm" novalidate>
       <div class="field"><label for="f-word">Word</label><input id="f-word" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
       <div class="two">
-        <div class="field"><label for="f-reading">Reading</label><input id="f-reading" autocomplete="off" spellcheck="false" placeholder="あいまい / yeoljeong"></div>
+        <div class="field"><label for="f-reading">Reading / Hanja</label><input id="f-reading" autocomplete="off" spellcheck="false" placeholder="あいまい / yeoljeong"></div>
         <div class="field"><label for="f-lang">Speech language</label><select id="f-lang"></select></div>
       </div>
       <div class="two">
@@ -621,11 +882,15 @@ service cloud.firestore {
           </select>
         </div>
       </div>
-      <div class="field"><label for="f-def">Definition</label><textarea id="f-def" rows="2"></textarea></div>
+      <div class="field"><label for="f-defzh">Definition &middot; 繁體中文</label><textarea id="f-defzh" rows="2" lang="zh-Hant" placeholder="繁體中文定義"></textarea></div>
+      <div class="field" id="fw-def"><label for="f-def">Definition &middot; English</label><textarea id="f-def" rows="2"></textarea></div>
       <div class="field"><label for="f-s1">Example sentence 1</label><textarea id="f-s1" rows="2"></textarea></div>
-      <div class="field"><label for="f-t1">English translation 1</label><textarea id="f-t1" rows="2"></textarea></div>
+      <div class="field"><label for="f-tz1">Translation 1 &middot; 繁體中文</label><textarea id="f-tz1" rows="2" lang="zh-Hant"></textarea></div>
+      <div class="field" id="fw-t1"><label for="f-t1">Translation 1 &middot; English</label><textarea id="f-t1" rows="2"></textarea></div>
       <div class="field"><label for="f-s2">Example sentence 2</label><textarea id="f-s2" rows="2"></textarea></div>
-      <div class="field"><label for="f-t2">English translation 2</label><textarea id="f-t2" rows="2"></textarea></div>
+      <div class="field"><label for="f-tz2">Translation 2 &middot; 繁體中文</label><textarea id="f-tz2" rows="2" lang="zh-Hant"></textarea></div>
+      <div class="field" id="fw-t2"><label for="f-t2">Translation 2 &middot; English</label><textarea id="f-t2" rows="2"></textarea></div>
+      <p class="sheet-sub" id="fEnNote" hidden style="text-transform:none;letter-spacing:0">English cards show 繁體中文 only. English fields are hidden but kept.</p>
       <p class="status warn" id="editError" role="alert"></p>
       <div class="sheet-actions">
         <button type="submit" class="btn primary"><span data-icon="check"></span>Save</button>
@@ -645,7 +910,7 @@ service cloud.firestore {
     </div>
     <form id="nameForm" novalidate>
       <div class="field"><label for="nameInput">Deck name</label><input id="nameInput" maxlength="40" autocomplete="off" placeholder="e.g. Aviation Tech"></div>
-      <div class="field"><label for="nameLang">Speech language</label><select id="nameLang"></select></div>
+      <div class="field"><label for="nameLang">Language (speech &amp; expedition)</label><select id="nameLang"></select></div>
       <p class="status warn" id="nameError" role="alert"></p>
       <div class="sheet-actions">
         <button type="submit" class="btn primary"><span data-icon="check"></span>Save</button>
@@ -687,6 +952,53 @@ service cloud.firestore {
       <div class="cal-grid cal-dow" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
       <div class="cal-grid" id="calGrid" role="grid" aria-label="Days studied"></div>
     </div>
+  </div>
+</div>
+
+<div class="map-overlay" id="mapSheet" role="dialog" aria-modal="true" aria-labelledby="mapTitle" tabindex="-1" hidden>
+  <div class="map-inner">
+    <div class="map-head">
+      <div><h2 id="mapTitle">Language Expedition Map</h2></div>
+      <div class="acts">
+        <button class="icon-btn" data-action="close-sheet" aria-label="Close map"><span data-icon="x"></span></button>
+      </div>
+    </div>
+    <div class="map-tabs" role="tablist" aria-label="Language">
+      <button class="mtab" role="tab" data-action="map-lang" data-lang="ja" id="mtab-ja"><span>&#127471;&#127477; JA</span><b id="mtot-ja">0</b></button>
+      <button class="mtab" role="tab" data-action="map-lang" data-lang="ko" id="mtab-ko"><span>&#127472;&#127479; KO</span><b id="mtot-ko">0</b></button>
+      <button class="mtab" role="tab" data-action="map-lang" data-lang="en" id="mtab-en"><span>&#127482;&#127480; EN</span><b id="mtot-en">0</b></button>
+    </div>
+    <div class="map-stats" id="mapStats"></div>
+    <div class="map-scroll" id="mapScroll"><div class="map-track" id="mapTrack"></div></div>
+    <div class="inspect" id="inspect" role="region" aria-live="polite" aria-label="Station details" hidden></div>
+  </div>
+</div>
+
+<div class="portal" id="portal" role="dialog" aria-modal="true" aria-labelledby="portalTitle" tabindex="-1" hidden>
+  <div class="portal-inner">
+    <div class="portal-top">
+      <button class="icon-btn" data-action="portal-back" aria-label="Back to the altar"><span data-icon="left"></span></button>
+      <h2 id="portalTitle">Ritual Portal</h2>
+      <button class="icon-btn" id="portalTargetBtn" data-action="portal-target" aria-label="Set daily immersion target" aria-haspopup="dialog"><span data-icon="target"></span></button>
+    </div>
+    <div class="portal-scroll" id="portalScroll"><div id="portalBody"></div></div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="targetSheet" hidden>
+  <div class="sheet frost" role="dialog" aria-modal="true" aria-labelledby="targetTitle" tabindex="-1">
+    <div class="sheet-head">
+      <div><h2 id="targetTitle">Daily immersion target</h2><p class="sheet-sub" id="targetSub"></p></div>
+      <button class="icon-btn" data-action="target-close" aria-label="Close"><span data-icon="x"></span></button>
+    </div>
+    <p class="tgt-copy">Hours of listening, YouTube, podcasts or any other input you want to log each day. Changes apply to today as well.</p>
+    <div class="stepper">
+      <button class="icon-btn" data-action="target-minus" aria-label="Decrease by 15 minutes"><span data-icon="minus"></span></button>
+      <div class="tgt-val"><b id="targetVal">2.0</b><span>hrs / day</span></div>
+      <button class="icon-btn" data-action="target-plus" aria-label="Increase by 15 minutes"><span data-icon="plus"></span></button>
+    </div>
+    <div class="chips" id="targetChips" role="group" aria-label="Quick targets"></div>
+    <div class="sheet-actions"><button class="btn primary wide" data-action="target-save"><span data-icon="check"></span>Save target</button></div>
   </div>
 </div>
 
@@ -784,8 +1096,15 @@ var ICONS = {
   'chevron-left':'<path d="m15 18-6-6 6-6"/>',
   'chevron-right':'<path d="m9 18 6-6-6-6"/>',
   circle:'<circle cx="12" cy="12" r="8"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  minus:'<path d="M5 12h14"/>',
+  headphones:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+  mic:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
+  sliders:'<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/>',
+  lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   copy:'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>',
   refresh:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   check:'<path d="M20 6 9 17l-5-5"/>',
   'chevron-down':'<path d="m6 9 6 6 6-6"/>',
@@ -837,6 +1156,28 @@ var LEX_ASIA = [
 ];
 LEX_ASIA.forEach(function(r){
   LEX[r[0]] = {lang:r[2], reading:r[1], phonetic:'', pos:r[3], definition:r[4], sentences:[{text:r[5][0], en:r[5][1]}, {text:r[6][0], en:r[6][1]}]};
+});
+/* Traditional Chinese (繁體中文) for the built-in words. */
+var ZH_DEF = {
+  ephemeral:'短暫的；轉瞬即逝的', resilient:'有韌性的；能迅速復原的', meticulous:'一絲不苟的；極為細心的', ubiquitous:'無所不在的',
+  candid:'坦率的；直言不諱的', pragmatic:'務實的；講求實際的', inevitable:'無可避免的；必然發生的', ambiguous:'模稜兩可的；含糊不清的',
+  scrutinize:'仔細審查；詳細檢視', mitigate:'減輕；緩和', alleviate:'減輕（痛苦、憂慮或困難）', collaborate:'合作；協力',
+  substantiate:'證實；提出證據支持', serendipity:'意外的驚喜；機緣巧合', nuance:'細微差別；微妙之處', paradigm:'典範；模式',
+  diligence:'勤奮；勤勉', leverage:'影響力；優勢；槓桿作用', thoroughly:'徹底地；完全地', eventually:'最終；終究',
+  '曖昧':'曖昧不明的；含糊的', '挑戦':'挑戰；嘗試困難的事', '約束':'約定；承諾', '景色':'景色；風景', '懐かしい':'令人懷念的',
+  '열정':'熱情；熱忱', '약속':'約定；承諾', '경험':'經驗；經歷', '따뜻하다':'溫暖的；暖和的'
+};
+var ZH_SENT = {
+  '曖昧':['那是個含糊的回答。','他的態度很曖昧。'], '挑戦':['我喜歡挑戰新事物。','她挑戰了世界紀錄。'],
+  '約束':['我一定會遵守約定。','明天我和朋友有約。'], '景色':['從山頂望出去的景色棒極了。','從窗戶可以看見美麗的風景。'],
+  '懐かしい':['聽到這首歌就覺得很懷念。','我和久違的老朋友重逢了。'],
+  '열정':['他對工作充滿熱情。','只要有熱情，就沒有做不到的事。'], '약속':['我們約好明天見面。','遵守約定很重要。'],
+  '경험':['這趟旅行是個很棒的經驗。','她是一位經驗豐富的老師。'], '따뜻하다':['今天天氣很暖和。','要不要來杯熱茶？']
+};
+Object.keys(ZH_DEF).forEach(function(w){
+  var L = LEX[w]; if(!L) return;
+  L.zh = ZH_DEF[w];
+  (ZH_SENT[w] || []).forEach(function(t, i){ if(L.sentences[i]) L.sentences[i].zh = t; });
 });
 var SAMPLE_SEED = ['ephemeral','resilient','meticulous','scrutinize','mitigate','serendipity','nuance','thoroughly'];
 var SEED_JA = ['曖昧','挑戦','約束','景色','懐かしい'], SEED_KO = ['열정','약속','경험','따뜻하다'];
@@ -906,13 +1247,14 @@ var KEY = 'wordstack.v2', OLD_KEY = 'wordstack.v1';
 function makeDeck(name, cards, lang){ return {id:'deck-' + uid(), name:name, lang:lang || '', createdAt:Date.now(), cards:cards || [], index:0}; }
 function cardFromLex(w){
   var L = LEX[w];
-  return {id:uid(), word:w, reading:L.reading, lang:'', phonetic:L.phonetic, pos:L.pos, definition:L.definition,
-    sentences:L.sentences.map(function(x){ return x.text; }), translations:L.sentences.map(function(x){ return x.en; }), auto:false, sample:true};
+  return {id:uid(), word:w, reading:L.reading, lang:'', phonetic:L.phonetic, pos:L.pos, definition:L.definition, definitionZh:L.zh || '',
+    sentences:L.sentences.map(function(x){ return x.text; }), translations:L.sentences.map(function(x){ return x.en; }),
+    translationsZh:L.sentences.map(function(x){ return x.zh || ''; }), auto:false, sample:true};
 }
 function load(){
   try{
     var raw = localStorage.getItem(KEY);
-    if(raw){ var s = JSON.parse(raw); if(s && Array.isArray(s.decks) && s.decks.length) return s; }
+    if(raw){ var s = JSON.parse(raw); if(s && Array.isArray(s.decks) && (s.decks.length || s.v === 2)) return s; }
   }catch(e){}
   try{
     /* Migrate the old single-deck format into a "General" deck. The old key is left untouched as a backup. */
@@ -946,16 +1288,24 @@ function ensureSrs(c){
   if(typeof c.repetitions !== 'number' || !(c.repetitions >= 0)) c.repetitions = 0;
   if(!c.dueDate || isNaN(Date.parse(c.dueDate))) c.dueDate = null;
 }
-function nextInterval(c){
-  var r = c.repetitions || 0;
+/* Exponential (SM-2 style) scaling. Grades: 'again' | 'hard' | 'good' | 'easy' (the swipe UI maps Unfamiliar -> again, Familiar -> good).
+   Legacy cards simply carry on from their stored interval / repetitions, so no review date or history is rewritten. */
+function nextInterval(c, grade){
+  var r = c.repetitions || 0, prev = c.interval || 0;
+  if(grade === 'again') return 0;
+  if(grade === 'hard') return Math.max(1, Math.round(prev * 1.2));
+  if(grade === 'easy') return r === 0 ? 3 : Math.max(3, Math.round(prev * 2.8));
   if(r === 0) return 1;
   if(r === 1) return 3;
-  return Math.max(1, Math.round((c.interval || 1) * 2.2));
+  return Math.max(1, Math.round(prev * 2.3));
 }
-function applyGrade(c, familiar){
-  if(familiar){ c.interval = nextInterval(c); c.repetitions = (c.repetitions || 0) + 1; }
-  else { c.interval = 1; c.repetitions = 0; }
-  c.dueDate = new Date(Date.now() + c.interval * DAY).toISOString();
+function applyGrade(c, grade){
+  if(grade === true) grade = 'good'; else if(grade === false || !grade) grade = 'again';
+  var iv = nextInterval(c, grade);
+  if(grade === 'again') c.repetitions = 0;
+  else if(grade !== 'hard') c.repetitions = (c.repetitions || 0) + 1;
+  c.interval = iv;
+  c.dueDate = new Date(Date.now() + iv * DAY).toISOString();   /* interval 0 = due immediately */
 }
 function fmtDays(n){ return n < 30 ? n + 'd' : n < 365 ? Math.round(n / 30) + 'mo' : (Math.round(n / 36.5) / 10) + 'y'; }
 function fmtIn(ms){
@@ -967,7 +1317,7 @@ function fmtIn(ms){
   return 'about ' + dd + ' days';
 }
 function seed(){
-  var g = makeDeck('General', SAMPLE_SEED.map(cardFromLex), '');
+  var g = makeDeck('English Sample', SAMPLE_SEED.map(cardFromLex), 'en-US');
   var j = makeDeck('Japanese Sample', SEED_JA.map(cardFromLex), 'ja-JP');
   var k = makeDeck('Korean Sample', SEED_KO.map(cardFromLex), 'ko-KR');
   return {v:2, activeDeckId:g.id, decks:[g, j, k]};
@@ -978,6 +1328,47 @@ function deckById(id){
 }
 var state = load() || seed();
 var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+var LANG_ORDER = ['ja', 'ko', 'en'];
+/* Three-Flame Altar tracking. dailyTargets (hours), lifetimeHours, dailyProgress follow the shapes in the spec; each entry also carries
+   small timestamps (at / inAt / outAt) so two devices can merge field by field. lifetimeBase = hours logged before today. */
+var ALTAR_LANGS = ['en', 'ja', 'ko'];
+var TARGET_DEFAULT = {en:1, ja:2, ko:0.5};
+function r2(n){ return Math.round(n * 100) / 100; }
+function freshProgress(date){
+  var o = {date:date};
+  ALTAR_LANGS.forEach(function(k){ o[k] = {inputMinutes:0, deckDone:false, outputDone:false, inAt:0, outAt:0}; });
+  return o;
+}
+function normalizeTracking(){
+  var t = (state.dailyTargets && typeof state.dailyTargets === 'object') ? state.dailyTargets : {};
+  var b = (state.lifetimeBase && typeof state.lifetimeBase === 'object') ? state.lifetimeBase : {};
+  var dp = (state.dailyProgress && typeof state.dailyProgress === 'object') ? state.dailyProgress : {};
+  if(!DATE_RE.test(dp.date || '')) dp.date = null;
+  ALTAR_LANGS.forEach(function(k){
+    var h = Number(t[k] && t[k].hours);
+    t[k] = {hours:(isFinite(h) && h >= 0) ? Math.min(12, Math.round(h * 4) / 4) : TARGET_DEFAULT[k], at:(t[k] && t[k].at >= 0) ? Number(t[k].at) : 0};
+    var bv = Number(b[k]); b[k] = (isFinite(bv) && bv >= 0) ? r2(bv) : 0;
+    var e = (dp[k] && typeof dp[k] === 'object') ? dp[k] : {}, m = Math.round(Number(e.inputMinutes));
+    dp[k] = {inputMinutes:(isFinite(m) && m >= 0) ? Math.min(1440, m) : 0, deckDone:!!e.deckDone, outputDone:!!e.outputDone,
+             inAt:e.inAt >= 0 ? Number(e.inAt) : 0, outAt:e.outAt >= 0 ? Number(e.outAt) : 0};
+  });
+  state.dailyTargets = t; state.lifetimeBase = b; state.dailyProgress = dp;
+  rolloverDay();
+  recalcLifetime();
+}
+/* Midnight (local time): today's progress is archived into lifetimeBase and a clean day starts. Targets, lifetime hours and streak history are kept. */
+function rolloverDay(){
+  var today = localDay(0), dp = state.dailyProgress;
+  if(dp.date !== null && dp.date >= today) return false;
+  if(dp.date) ALTAR_LANGS.forEach(function(k){ state.lifetimeBase[k] = r2(state.lifetimeBase[k] + dp[k].inputMinutes / 60); });
+  state.dailyProgress = freshProgress(today);
+  return true;
+}
+function recalcLifetime(){
+  var lt = {};
+  ALTAR_LANGS.forEach(function(k){ lt[k] = r2(state.lifetimeBase[k] + state.dailyProgress[k].inputMinutes / 60); });
+  state.lifetimeHours = lt;
+}
 function normalizeState(){
   state.decks.forEach(function(d){
     if(!d.id) d.id = 'deck-' + uid();
@@ -990,10 +1381,18 @@ function normalizeState(){
       if(typeof c.reading !== 'string') c.reading = '';
       if(typeof c.lang !== 'string') c.lang = '';
       if(!Array.isArray(c.translations)) c.translations = [];
+      if(!c.definitionZh && c.def_zh) c.definitionZh = c.def_zh;
+      if(!c.definition && c.def_en) c.definition = c.def_en;
+      if(typeof c.definitionZh !== 'string') c.definitionZh = '';
+      if(!Array.isArray(c.translationsZh)) c.translationsZh = [];
+      if(c.sample && !c.definitionZh && ZH_DEF[c.word]){            /* built-in sample cards made before 繁體中文 existed */
+        c.definitionZh = ZH_DEF[c.word];
+        if(!c.translationsZh.some(Boolean) && ZH_SENT[c.word]) c.translationsZh = ZH_SENT[c.word].slice();
+      }
       ensureSrs(c);
     });
   });
-  if(!deckById(state.activeDeckId)) state.activeDeckId = state.decks[0].id;
+  if(!deckById(state.activeDeckId)) state.activeDeckId = state.decks.length ? state.decks[0].id : null;
   /* Streak data lives at the top level of state: streakCount, lastStudiedDate and completedDates ("YYYY-MM-DD", local time). */
   if(!state.streak || typeof state.streak !== 'object') state.streak = {};
   if(!(state.streak.streakCount >= 0)) state.streak.streakCount = 0;
@@ -1001,6 +1400,8 @@ function normalizeState(){
   if(!Array.isArray(state.streak.completedDates)) state.streak.completedDates = [];
   state.streak.completedDates = state.streak.completedDates.filter(function(x, i, a){ return DATE_RE.test(x) && a.indexOf(x) === i; }).sort();
   if(!state.daily || !DATE_RE.test(state.daily.date || '') || !Array.isArray(state.daily.ids)) state.daily = {date:null, ids:[]};
+  delete state.baselines;                                          /* retired: the expedition now counts mastered cards only */
+  normalizeTracking();
   /* Sync bookkeeping, local only: localRev = time of the last local data change, syncedRev = the localRev last confirmed in the cloud,
      remoteMs = server time of the newest cloud copy this device has seen, uid = the cloud account these numbers refer to. */
   var hadMeta = state.meta && typeof state.meta === 'object';
@@ -1015,13 +1416,15 @@ function normalizeState(){
 }
 normalizeState();
 function syncSig(){
-  return JSON.stringify([state.decks.map(function(d){ return {id:d.id, name:d.name, lang:d.lang, createdAt:d.createdAt, cards:d.cards}; }), state.streak, state.daily]);
+  return JSON.stringify([state.decks.map(function(d){ return {id:d.id, name:d.name, lang:d.lang, createdAt:d.createdAt, cards:d.cards}; }), state.streak, state.daily, state.dailyTargets, state.lifetimeBase, state.dailyProgress]);
 }
 var lastSig = syncSig();
 var SYNC_DEBOUNCE = 1500, CFG_KEY = 'wordstack.fbconfig', DEV_KEY = 'wordstack.device';
 var cloud = {cfg:null, auth:null, db:null, user:null, ref:null, unsub:null, timer:null, watchdog:null, retry:null,
              pushing:null, inflightRev:-1, status:'local', note:'', lastSyncAt:0, started:false, applying:false};
-function deck(){ return deckById(state.activeDeckId) || state.decks[0]; }
+var NO_DECK = {id:'', name:'No deck selected', cards:[], index:0, lang:'', createdAt:0};
+function hasDeck(){ return !!(deckById(state.activeDeckId) || state.decks.length); }
+function deck(){ return deckById(state.activeDeckId) || state.decks[0] || NO_DECK; }
 function cards(){ return deck().cards; }
 /* Speech language for a piece of text on a card: card setting, then deck setting, then auto-detect. */
 function langFor(c, text, d){ return c.lang || (d && d.lang) || detectLang(text || c.word); }
@@ -1051,7 +1454,7 @@ var el = {
   list:$('#cardList'), copyBtn:$('#copyBtn'), clearBtn:$('#clearBtn'), clearLabel:$('#clearLabel'), exportBox:$('#exportBox'), newBtn:$('#newBtn'),
   sheet:$('#sheet'), sheetPanel:$('#sheetPanel'), sheetTitle:$('#sheetTitle'), sheetDeck:$('#sheetDeck'), editForm:$('#editForm'), editError:$('#editError'),
   sheetDelete:$('#sheetDelete'), sheetDeleteLabel:$('#sheetDeleteLabel'),
-  fWord:$('#f-word'), fReading:$('#f-reading'), fLang:$('#f-lang'), fPhon:$('#f-phon'), fPos:$('#f-pos'), fDef:$('#f-def'),
+  fWord:$('#f-word'), fReading:$('#f-reading'), fLang:$('#f-lang'), fPhon:$('#f-phon'), fPos:$('#f-pos'), fDef:$('#f-def'), fDefZh:$('#f-defzh'), fTz1:$('#f-tz1'), fTz2:$('#f-tz2'), fwDef:$('#fw-def'), fwT1:$('#fw-t1'), fwT2:$('#fw-t2'), fEnNote:$('#fEnNote'),
   fS1:$('#f-s1'), fT1:$('#f-t1'), fS2:$('#f-s2'), fT2:$('#f-t2'),
   nameSheet:$('#nameSheet'), nameTitle:$('#nameTitle'), nameForm:$('#nameForm'), nameInput:$('#nameInput'), nameLang:$('#nameLang'), nameError:$('#nameError'),
   pickSheet:$('#pickSheet'), pickList:$('#pickList'),
@@ -1060,6 +1463,9 @@ var el = {
   cloudLinkBtn:$('#cloudLinkBtn'), cloudSignInBtn:$('#cloudSignInBtn'), cloudSignOutBtn:$('#cloudSignOutBtn'),
   progress:$('#progress'), drag:$('#drag'), glow:$('#glow'), badgeGood:$('#badgeGood'), badgeAgain:$('#badgeAgain'),
   goodBtn:$('#goodBtn'), studyDone:$('#studyDone'), doneTitle:$('#doneTitle'), doneText:$('#doneText'), doneStats:$('#doneStats'),
+  mapSheet:$('#mapSheet'), mapScroll:$('#mapScroll'), mapTrack:$('#mapTrack'), mapStats:$('#mapStats'), inspect:$('#inspect'),
+  altarBody:$('#altarBody'), portal:$('#portal'), portalBody:$('#portalBody'), portalScroll:$('#portalScroll'), targetSheet:$('#targetSheet'),
+  targetVal:$('#targetVal'), targetSub:$('#targetSub'), targetChips:$('#targetChips'),
   toast:$('#toast')
 };
 $$('[data-icon]').forEach(function(n){ n.insertAdjacentHTML('afterbegin', icon(n.getAttribute('data-icon'), 22)); });
@@ -1071,14 +1477,17 @@ var flipped = false, tab = 'study', armed = null, armedTimer = null, busy = fals
 var manageDeckId = null, nameMode = null, targetDirty = false;
 
 /* ---------- deck operations ---------- */
-function setActive(id){ state.activeDeckId = id; flipped = false; targetDirty = false; save(); }
+function setActive(id){ state.activeDeckId = id; manualPick = id; flipped = false; targetDirty = false; save(); }
 function createDeck(name, lang){ var d = makeDeck(name, [], lang); state.decks.push(d); return d; }
 function removeDeck(id){
   var i = state.decks.findIndex(function(d){ return d.id === id; });
   if(i < 0) return;
   state.decks.splice(i, 1);
-  if(!state.decks.length) state.decks.push(makeDeck('General'));
-  if(!deckById(state.activeDeckId)){ state.activeDeckId = state.decks[0].id; flipped = false; }
+  /* Any deck (including the active one) can be deleted. The active pointer moves to a neighbour, or to null when none are left. */
+  if(!deckById(state.activeDeckId)){
+    state.activeDeckId = state.decks.length ? state.decks[Math.min(i, state.decks.length - 1)].id : null;
+    flipped = false; sess = null;
+  }
   if(manageDeckId === id) manageDeckId = null;
   save();
 }
@@ -1133,9 +1542,16 @@ var VOICE_PREF = {
   en:/Samantha|Google US|Aaron|Allison|Ava|Nicky|Joelle|Jenny/i
 };
 var warnedLang = {};
+/* Voices load asynchronously on most browsers (and iOS Safari), so cache them as soon as they appear. */
+var voiceCache = [], voicePick = {};
+function refreshVoices(){
+  if(!synth) return;
+  try{ var vs = synth.getVoices() || []; if(vs.length){ voiceCache = vs.slice(); voicePick = {}; } }catch(e){}
+}
 function voiceFor(lang){
   if(!synth) return null;
-  var vs = synth.getVoices() || [], want = lang.toLowerCase().replace('_', '-'), base = want.slice(0, 2);
+  if(!voiceCache.length) refreshVoices();
+  var vs = voiceCache, want = lang.toLowerCase().replace('_', '-'), base = want.slice(0, 2);
   function vl(v){ return (v.lang || '').toLowerCase().replace('_', '-'); }
   var exact = vs.filter(function(v){ return vl(v) === want; });
   var pool = exact.length ? exact : vs.filter(function(v){ return vl(v).indexOf(base) === 0; });
@@ -1144,7 +1560,23 @@ function voiceFor(lang){
   return (pref && pool.filter(function(v){ return pref.test(v.name); })[0])
       || pool.filter(function(v){ return v.localService; })[0] || pool[0];
 }
-if(synth){ try{ synth.getVoices(); }catch(e){} }
+if(synth){
+  refreshVoices();
+  try{ synth.onvoiceschanged = refreshVoices; }catch(e){}
+  /* iOS Safari keeps speech locked until a user gesture touches the synth: cancel() on the first touch unlocks it cleanly. */
+  var unlockSpeech = function(){
+    document.removeEventListener('touchstart', unlockSpeech, true);
+    document.removeEventListener('pointerdown', unlockSpeech, true);
+    document.removeEventListener('click', unlockSpeech, true);
+    try{ synth.cancel(); }catch(e){}
+    refreshVoices();
+  };
+  document.addEventListener('touchstart', unlockSpeech, {capture:true, passive:true});
+  document.addEventListener('pointerdown', unlockSpeech, true);
+  document.addEventListener('click', unlockSpeech, true);
+}
+var speakToken = 0;
+var RATE_NORMAL = 0.88, RATE_SLOW = 0.7;
 function speak(text, rate, btn, lang){
   if(!synth || !window.SpeechSynthesisUtterance){ toast('Speech is not supported in this browser'); return; }
   if(!text){ return; }
@@ -1160,9 +1592,11 @@ function speak(text, rate, btn, lang){
       warnedLang[lang.slice(0, 2)] = 1;
       toast('No ' + langName(lang) + ' voice found. Add one in your device speech settings.');
     }
-    u.rate = rate;
-    if(btn) btn.classList.add('speaking');
-    var done = function(){ if(btn) btn.classList.remove('speaking'); };
+    u.rate = rate; u.pitch = 1; u.volume = 1;
+    var tok = ++speakToken;
+    if(btn) btn.classList.add('speaking');                 /* instant feedback, even if the device is muted */
+    var done = function(){ if(tok === speakToken && btn) btn.classList.remove('speaking'); };   /* a cancelled older utterance must not clear the newer glow */
+    u.onstart = function(){ if(tok === speakToken && btn) btn.classList.add('speaking'); };
     u.onend = done; u.onerror = done;
     synth.speak(u);
   }catch(e){ toast('Could not play audio'); }
@@ -1215,11 +1649,33 @@ function setFlip(v){
   el.front.setAttribute('aria-hidden', v ? 'true' : 'false');
   el.back.setAttribute('aria-hidden', v ? 'false' : 'true');
 }
+function updateScrollable(){
+  [el.front, el.back].forEach(function(f){ if(f && f.classList) f.classList.toggle('scrolls', f.scrollHeight - f.clientHeight > 1); });
+}
+/* Back-of-card definitions. JA and KO always show 繁體中文 and English; EN shows 繁體中文 only (English is a fallback until a 繁體中文 definition exists). */
+function defBlocks(c, base){
+  var zh = c.definitionZh || c.def_zh || '';
+  var en = c.definition || c.def_en || '';
+  function blk(tag, lang, cls, text){ return '<div class="defb"><span class="deftag">'+tag+'</span><p class="def '+cls+'" lang="'+lang+'">'+esc(text)+'</p></div>'; }
+  function miss(tag, msg){ return '<div class="defb"><span class="deftag">'+tag+'</span><p class="def empty">'+msg+'</p></div>'; }
+  if(base === 'en'){
+    if(zh) return '<div class="defs">' + blk('繁中', 'zh-Hant', 'def-zh', zh) + '</div>';
+    if(en) return '<div class="defs">' + blk('EN', 'en', 'def-en', en) + '</div><p class="auto-note">No 繁體中文 definition yet. Tap Edit Card to add one.</p>';
+    return '<div class="defs">' + miss('繁中', 'No definition yet. Tap Edit Card to add one.') + '</div>';
+  }
+  return '<div class="defs">' +
+    (zh ? blk('繁中', 'zh-Hant', 'def-zh', zh) : miss('繁中', 'No 繁體中文 definition yet. Tap Edit Card.')) +
+    (en ? blk('EN', 'en', 'def-en', en) : miss('EN', 'No English definition yet. Tap Edit Card.')) + '</div>';
+}
 function renderStudy(){
-  var d = deck(), n = d.cards.length;
-  el.deckPillName.textContent = d.name;
+  var d = deck(), n = d.cards.length, none = !hasDeck();
+  $('#studyEmptyTitle').textContent = none ? 'Select a deck to begin' : 'This deck is empty';
+  $('#studyEmptyText').textContent = none ? 'You have no decks yet. Create one in Decks, or pick a language on the Altar and add words in Build.' : 'Paste a list of words and Wordstack turns each one into a card in this deck.';
+  $('#studyEmptyBtnText').textContent = none ? 'Go to Decks' : 'Add words';
+  $('#studyEmptyBtn').setAttribute('data-tab', none ? 'manage' : 'build');
+  el.deckPillName.textContent = none ? 'Select a deck' : d.name;
   el.deckPillCount.textContent = n + (n === 1 ? ' card' : ' cards');
-  el.deckPill.setAttribute('aria-label', 'Switch deck. Current deck: ' + d.name);
+  el.deckPill.setAttribute('aria-label', none ? 'Select a deck' : 'Switch deck. Current deck: ' + d.name);
   el.studyEmpty.hidden = n > 0;
   el.progress.hidden = n === 0;
   if(!n){ el.studyMain.hidden = true; el.studyDone.hidden = true; return; }
@@ -1243,13 +1699,13 @@ function renderStudy(){
       (c.phonetic ? '<p class="phon">'+esc(c.phonetic)+'</p>' : '') +
       '<button class="speak big" data-action="speak-word" aria-label="Pronounce '+esc(c.word)+'">'+icon('speaker',30)+'</button>' +
     '</div>';
-  var defHtml = c.definition
-    ? '<p class="def">'+esc(c.definition)+'</p>'
-    : '<p class="def empty">No definition yet. Tap Edit Card to add one.</p>';
+  var defHtml = defBlocks(c, lc);
   var ex = c.sentences.map(function(s, i){
-    var tr = (c.translations || [])[i], sl = langFor(c, s, d).slice(0, 2).toLowerCase();
+    if(!s || !String(s).trim()) return '';
+    var tr = (c.translations || [])[i], tz = (c.translationsZh || [])[i], sl = langFor(c, s, d).slice(0, 2).toLowerCase();
     return '<li><div class="ex-body"><p class="ex-text" lang="'+sl+'">'+highlight(s, c.word)+'</p>' +
-      (tr ? '<p class="ex-en" lang="en">'+esc(tr)+'</p>' : '') + '</div>' +
+      (tz ? '<p class="ex-zh" lang="zh-Hant">'+esc(tz)+'</p>' : '') +
+      (tr && lc !== 'en' ? '<p class="ex-en" lang="en">'+esc(tr)+'</p>' : '') + '</div>' +
       '<div class="ex-actions">' +
         '<button class="speak" data-action="speak-sent" data-i="'+i+'" aria-label="Read example '+(i+1)+' aloud">'+icon('speaker',20)+'</button>' +
         '<button class="speak copy" data-action="copy-sent" data-i="'+i+'" aria-label="Copy example '+(i+1)+'">'+icon('copy',20)+'</button>' +
@@ -1257,10 +1713,12 @@ function renderStudy(){
   }).join('');
   el.back.innerHTML =
     '<div class="face-head"><span class="face-label" lang="'+lc+'">'+esc(c.word)+'</span>'+posHtml+'</div>' +
-    '<div class="face-body back-body">' + defHtml + '<ul class="ex">'+ex+'</ul>' +
+    '<div class="face-body back-body">' + (c.reading ? '<p class="back-reading" lang="'+lc+'">'+esc(c.reading)+'</p>' : '') + defHtml + '<ul class="ex">'+ex+'</ul>' +
       (c.auto ? '<p class="auto-note">Template sentences. Tap Edit Card to make them your own.</p>' : '') +
+      (c.zhAuto && c.definitionZh ? '<p class="auto-note">繁體中文 was machine-translated. Tap Edit Card to refine it.</p>' : '') +
     '</div>';
   setFlip(flipped);
+  updateScrollable();
 }
 /* ---------- daily streak ---------- */
 var DAILY_GOAL = 5;
@@ -1281,19 +1739,12 @@ function bestStreak(){
   return Math.max(best, streakNow());
 }
 function reviewedToday(){ return state.daily.date === localDay(0) ? state.daily.ids.length : 0; }
-/* Counts one review. The day qualifies at 5 different cards reviewed, or when the due set is finished. Returns the new streak if it grew. */
-function recordReview(cardId, setFinished){
-  var today = localDay(0), s = state.streak;
+/* Notes one reviewed card for today's counter. The master streak no longer depends on it: it advances when all three flames are lit (see evaluateDay). */
+function recordReview(cardId){
+  var today = localDay(0);
   if(state.daily.date !== today) state.daily = {date:today, ids:[]};
   if(state.daily.ids.indexOf(cardId) < 0) state.daily.ids.push(cardId);
-  if(state.daily.ids.length < DAILY_GOAL && !setFinished) return 0;
-  var grew = 0;
-  if(s.lastStudiedDate !== today){
-    s.streakCount = s.lastStudiedDate === localDay(-1) ? s.streakCount + 1 : 1;
-    s.lastStudiedDate = today; grew = s.streakCount;
-  }
-  if(s.completedDates.indexOf(today) < 0){ s.completedDates.push(today); s.completedDates.sort(); }
-  return grew;
+  return 0;
 }
 function renderStreak(){
   var n = streakNow(), today = state.streak.lastStudiedDate === localDay(0);
@@ -1334,9 +1785,9 @@ function renderStreakSheet(){
   el.moStreak.textContent = String(streakNow());
   el.moTotal.textContent = String(state.streak.completedDates.length);
   el.moBest.textContent = String(bestStreak());
-  var r = reviewedToday(), doneToday = state.streak.lastStudiedDate === localDay(0);
-  el.moGoal.textContent = doneToday ? 'Today\u2019s goal is complete.' :
-    r + ' of ' + DAILY_GOAL + ' cards reviewed today. Finishing your due set counts too.';
+  var doneToday = state.streak.lastStudiedDate === localDay(0);
+  el.moGoal.textContent = doneToday ? 'The Grand Flame is lit today. Streak secured.' :
+    litCount() + ' of 3 flames lit today. Light English, Japanese and Korean together to advance the streak.';
   renderCalendar();
 }
 function openStreak(trigger){
@@ -1518,6 +1969,34 @@ function mergeDaily(a, b){
   var ids = a.ids.slice(); b.ids.forEach(function(x){ if(ids.indexOf(x) < 0) ids.push(x); });
   return {date:a.date, ids:ids};
 }
+function mergeTargets(l, r){
+  var o = {};
+  ALTAR_LANGS.forEach(function(k){
+    var a = l && l[k], c = r && r[k];
+    o[k] = (c && c.at > ((a && a.at) || 0)) ? clone(c) : clone(a || c || {hours:TARGET_DEFAULT[k], at:0});
+  });
+  return o;
+}
+function mergeBase(l, r){
+  var o = {};
+  ALTAR_LANGS.forEach(function(k){ o[k] = Math.max((l && l[k]) || 0, (r && r[k]) || 0); });
+  return o;
+}
+/* Same day: input minutes and the output toggle go to whichever device changed them last; deckDone only ever turns on. A newer day replaces an older one. */
+function mergeProgress(l, r){
+  if(!r || !r.date) return clone(l);
+  if(!l || !l.date) return clone(r);
+  if(l.date !== r.date) return clone(l.date > r.date ? l : r);
+  var o = {date:l.date};
+  ALTAR_LANGS.forEach(function(k){
+    var a = l[k] || {}, c = r[k] || {}, ai = a.inAt || 0, ci = c.inAt || 0, ao = a.outAt || 0, co = c.outAt || 0;
+    var inNew = ci > ai || (ci === ai && (c.inputMinutes || 0) > (a.inputMinutes || 0));
+    o[k] = {inputMinutes:(inNew ? c : a).inputMinutes || 0, inAt:Math.max(ai, ci),
+            outputDone:co === ao ? !!(a.outputDone || c.outputDone) : (co > ao ? !!c.outputDone : !!a.outputDone), outAt:Math.max(ao, co),
+            deckDone:!!(a.deckDone || c.deckDone)};
+  });
+  return o;
+}
 function mergeData(L, R){
   var decks = clone(L.decks), byId = {}, byName = {};
   decks.forEach(function(d){ byId[d.id] = d; byName[(d.name || '').trim().toLowerCase()] = d; });
@@ -1534,16 +2013,22 @@ function mergeData(L, R){
     });
   });
   decks.forEach(function(d){ if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
-  return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily)};
+  var tracking = {dailyTargets:mergeTargets(L.dailyTargets, R.dailyTargets), lifetimeBase:mergeBase(L.lifetimeBase, R.lifetimeBase), dailyProgress:mergeProgress(L.dailyProgress, R.dailyProgress)};
+  return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress};
 }
 function applyRemote(data, rms, merge){
   var stats = data.stats || {};
-  var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null};
+  var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null,
+                                    dailyTargets:data.dailyTargets ? clone(data.dailyTargets) : null, lifetimeBase:data.lifetimeBase ? clone(data.lifetimeBase) : null,
+                  dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null};
   cloud.applying = true;
   try{
-    var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily}, incoming) : incoming;
+    var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress}, incoming) : incoming;
     if(out.decks.length) state.decks = out.decks;
     state.streak = out.streak; state.daily = out.daily;
+    if(out.dailyTargets) state.dailyTargets = out.dailyTargets;
+    if(out.lifetimeBase) state.lifetimeBase = out.lifetimeBase;
+    if(out.dailyProgress) state.dailyProgress = out.dailyProgress;
     normalizeState();
     state.meta.remoteMs = rms;
     if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
@@ -1559,7 +2044,8 @@ function applyRemote(data, rms, merge){
 /* writes: debounced, silent on failure, never blocks the UI */
 function syncPayload(){
   return {decks:clone(state.decks),
-          stats:{streakCount:state.streak.streakCount, lastStudiedDate:state.streak.lastStudiedDate, completedDates:state.streak.completedDates.slice(), daily:clone(state.daily)}};
+          stats:{streakCount:state.streak.streakCount, lastStudiedDate:state.streak.lastStudiedDate, completedDates:state.streak.completedDates.slice(), daily:clone(state.daily)},
+          dailyTargets:clone(state.dailyTargets), lifetimeHours:clone(state.lifetimeHours), lifetimeBase:clone(state.lifetimeBase), dailyProgress:clone(state.dailyProgress)};
 }
 function scheduleSync(){
   if(cloud.applying || !cloud.ref) return;
@@ -1653,6 +2139,31 @@ function dueQueue(d){
   var due = d.cards.filter(function(c){ return c.dueDate && Date.parse(c.dueDate) <= now; }).sort(byDue);
   return ids(fresh.concat(due));
 }
+/* ---- deck progression: which decks still have cards due today ---- */
+var manualPick = null;                       /* deck the learner chose on purpose; auto-advance never moves them off it */
+function deckDue(d){ return d && d.cards.length ? dueQueue(d).length : 0; }
+function nextDueDeck(fromId){
+  var n = state.decks.length, i0 = -1, k;
+  for(k = 0; k < n; k++){ if(state.decks[k].id === fromId) i0 = k; }
+  for(k = 1; k <= n; k++){
+    var d = state.decks[((i0 < 0 ? -1 : i0) + k) % n];
+    if(d && d.id !== fromId && deckDue(d) > 0) return d;
+  }
+  return null;
+}
+/* Entering Study (and app start): if the active deck is finished, hop to the first deck that still has cards due. Runs only from those two entry points. */
+function autoAdvanceDeck(){
+  if(!state.decks.length) return false;
+  var cur = deck();
+  if(manualPick === cur.id) return false;
+  if(sess && sess.all && sess.deckId === cur.id) return false;       /* an explicit "review all" run stays put */
+  if(deckDue(cur) > 0) return false;
+  var nx = nextDueDeck(cur.id);
+  if(!nx) return false;                                              /* everything is done: stay and celebrate */
+  state.activeDeckId = nx.id; flipped = false; sess = null; targetDirty = false;
+  save();
+  return true;
+}
 function startSession(all){
   var d = deck(), keep = sess && sess.deckId === d.id ? sess : null;
   d.cards.forEach(ensureSrs);
@@ -1679,9 +2190,19 @@ function ensureSession(){
 function renderDone(d){
   var next = null, now = Date.now();
   d.cards.forEach(function(c){ var t = c.dueDate ? Date.parse(c.dueDate) : 0; if(t > now && (next === null || t < next)) next = t; });
-  el.doneTitle.textContent = sess.all ? 'Review complete' : 'All caught up';
-  el.doneText.textContent = (sess.reviewed ? 'Nice work. ' : 'No cards are due right now. ') +
-    (next !== null ? 'Next review in ' + fmtIn(next - now) + '.' : '');
+  var nx = nextDueDeck(d.id), nb = $('#doneNext'), rb = $('#doneReview');
+  if(nx){
+    var nn = deckDue(nx);
+    el.doneTitle.textContent = d.name + ' complete';
+    el.doneText.textContent = (sess.reviewed ? 'Nice work. ' : '') + nx.name + ' still has ' + nn + (nn === 1 ? ' card' : ' cards') + ' due today.';
+    $('#doneNextText').textContent = 'Continue to ' + nx.name + ' (' + nn + ' due)';
+    nb.hidden = false; rb.classList.remove('primary');
+  } else {
+    nb.hidden = true; rb.classList.add('primary');
+    el.doneTitle.textContent = sess.all ? 'Review complete' : 'All caught up';
+    el.doneText.textContent = (sess.reviewed ? 'Nice work. ' : 'No cards are due right now. ') +
+      (next !== null ? 'Next review in ' + fmtIn(next - now) + '.' : '');
+  }
   el.doneStats.innerHTML = sess.reviewed
     ? 'Familiar <b>' + sess.good + '</b> · Unfamiliar <b>' + sess.again + '</b>' : '';
 }
@@ -1831,13 +2352,18 @@ function grade(familiar){
   el.drag.style.opacity = '0';
   setTimeout(function(){
     sess.queue.shift();
+    var lvBefore = expLevels();
     applyGrade(c, familiar);
     sess.reviewed++;
     if(familiar) sess.good++;
     else { sess.again++; sess.queue.splice(Math.min(sess.queue.length, 3), 0, c.id); }
-    var grew = recordReview(c.id, sess.queue.length === 0);
-    flipped = false; save(); renderStreak();
-    if(grew){ popFlame(); toast(grew + (grew === 1 ? '-day streak started' : '-day streak'), 1800); }
+    recordReview(c.id);
+    flipped = false; save();
+    var ev = afterTracking(true);
+    var lvAfter = expLevels(); renderPills();
+    LANG_ORDER.forEach(function(k){
+      if(lvAfter[k] > lvBefore[k] && !ev.grew){ triggerHaptic([20, 40, 20]); toast(LANG_META[k].flag + ' Level up! Lv. ' + (lvAfter[k] + 1) + ' \u00b7 ' + LEVELS[lvAfter[k]].name, 2800); }
+    });
     var finished = sess.queue.length === 0 && !REDUCED;
     if(finished) el.studyDone.classList.add('celebrate');
     el.card.style.transition = 'none';
@@ -1891,6 +2417,21 @@ window.addEventListener('pointerup', function(e){
   if(!el.scene.contains(e.target)) return;
   if(Math.abs(dx) < 10 && Math.abs(dy) < 10){ if(cards().length){ triggerHaptic(10); setFlip(!flipped); } }
 });
+/* Touch gesture isolation. touch-action in CSS does the heavy lifting; these handlers are the belt and braces for WebKit:
+   once a horizontal drag is recognised, or whenever a touch is on the deck and not inside a face that really scrolls, the browser's own gesture is cancelled. */
+el.scene.addEventListener('touchmove', function(e){
+  if(e.cancelable && (dragging || !(e.target.closest && e.target.closest('.face.scrolls')))) e.preventDefault();
+}, {passive:false});
+document.addEventListener('touchmove', function(e){
+  if(!e.cancelable || tab !== 'study' || anySheetOpen()) return;
+  var t = e.target;
+  if(t && t.closest && t.closest('.face.scrolls, .sheet, .map-scroll, .inspect, .portal-scroll')) return;
+  e.preventDefault();                                              /* no page drag or rubber-band on the study screen */
+}, {passive:false});
+window.addEventListener('resize', updateScrollable);
+window.addEventListener('orientationchange', function(){ setTimeout(updateScrollable, 250); });
+if(typeof ResizeObserver === 'function'){ try{ new ResizeObserver(updateScrollable).observe(el.scene); }catch(e){} }
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(updateScrollable);
 window.addEventListener('pointercancel', function(){
   if(dragging){ dragging = false; snapBack(); }
   down = null;
@@ -1907,10 +2448,11 @@ function showSheet(node){
   var panel = node.firstElementChild;
   if(panel){ panel.scrollTop = 0; panel.focus(); }
 }
-function anySheetOpen(){ return !el.sheet.hidden || !el.nameSheet.hidden || !el.pickSheet.hidden || !el.streakSheet.hidden; }
+function anySheetOpen(){ return !el.sheet.hidden || !el.nameSheet.hidden || !el.pickSheet.hidden || !el.streakSheet.hidden || !el.mapSheet.hidden || !el.portal.hidden || !el.targetSheet.hidden; }
 function closeAnySheet(){
   var was = anySheetOpen();
-  el.sheet.hidden = true; el.nameSheet.hidden = true; el.pickSheet.hidden = true; el.streakSheet.hidden = true;
+  el.sheet.hidden = true; el.nameSheet.hidden = true; el.pickSheet.hidden = true; el.streakSheet.hidden = true; el.mapSheet.hidden = true; el.inspect.hidden = true; mapView.sel = -1;
+  el.portal.hidden = true; el.targetSheet.hidden = true; portal.drag = null;
   editingId = null; editDeckId = null; nameMode = null; disarm();
   if(was && lastFocus && lastFocus.focus){ try{ lastFocus.focus(); }catch(e){} }
 }
@@ -1919,11 +2461,17 @@ function closeAnySheet(){
 });
 
 /* ---------- deck picker (study) ---------- */
+function dueBadge(d){
+  if(!d.cards.length) return '';
+  var n = deckDue(d);
+  return n ? '<span class="due-chip">'+n+' due</span>' : '<span class="due-chip done">✓&nbsp;Done</span>';
+}
 function renderPicker(){
+  if(!state.decks.length){ el.pickList.innerHTML = '<li><p class="deck-meta" style="padding:14px">No decks yet. Create one in Decks.</p></li>'; return; }
   el.pickList.innerHTML = state.decks.map(function(d){
     var a = d.id === state.activeDeckId, n = d.cards.length;
-    return '<li><button class="pick'+(a?' is-active':'')+'" data-action="pick-deck" data-deck="'+esc(d.id)+'"'+(a?' aria-current="true"':'')+'>' +
-      '<span class="pick-name">'+esc(d.name)+'</span><span class="pick-count">'+n+(n===1?' card':' cards')+'</span>'+(a?icon('check',18):'') + '</button></li>';
+    return '<li><button class="pick'+(a?' is-active':'')+(n && !deckDue(d)?' is-done':'')+'" data-action="pick-deck" data-deck="'+esc(d.id)+'"'+(a?' aria-current="true"':'')+'>' +
+      '<span class="pick-name">'+esc(d.name)+'</span>'+dueBadge(d)+'<span class="pick-count">'+n+(n===1?' card':' cards')+'</span>'+(a?icon('check',18):'') + '</button></li>';
   }).join('');
 }
 function openPicker(){ lastFocus = document.activeElement; renderPicker(); showSheet(el.pickSheet); }
@@ -1961,11 +2509,13 @@ el.nameForm.addEventListener('submit', function(e){
 
 /* ---------- decks tab ---------- */
 function renderDecks(){
+  if(!state.decks.length){ el.deckList.innerHTML = '<li class="deck"><div class="deck-top"><h3>No decks yet</h3></div><p class="deck-meta">Tap New deck above, or add words in Build.</p></li>'; return; }
   el.deckList.innerHTML = state.decks.map(function(d){
     var isActive = d.id === state.activeDeckId, isArmed = armed === 'deck:' + d.id, n = d.cards.length;
-    return '<li class="deck'+(isActive?' is-active':'')+'" data-deck="'+esc(d.id)+'">' +
-      '<div class="deck-top"><h3>'+esc(d.name)+'</h3>'+(isActive?'<span class="chip-active">Active</span>':'')+'</div>' +
-      '<p class="deck-meta">'+n+(n===1?' card':' cards')+(d.lang?' · '+esc(langName(d.lang)):'')+' · Created '+esc(fmtDate(d.createdAt))+'</p>' +
+    return '<li class="deck'+(isActive?' is-active':'')+(n && !deckDue(d)?' is-done':'')+'" data-deck="'+esc(d.id)+'">' +
+      '<div class="deck-top"><h3>'+esc(d.name)+'</h3>'+(isActive?'<span class="chip-active">Active</span>':'')+dueBadge(d)+'</div>' +
+      '<button type="button" class="lang-tag" data-action="deck-portal" data-lang="'+deckBase(d)+'" aria-label="'+ALT_META[deckBase(d)].name+' deck. Open its ritual portal"><span aria-hidden="true">'+ALT_META[deckBase(d)].flag+'</span> '+ALT_META[deckBase(d)].name+'<i aria-hidden="true">›</i></button>' +
+      '<p class="deck-meta">'+n+(n===1?' card':' cards')+' · Created '+esc(fmtDate(d.createdAt))+'</p>' +
       (isArmed ? '<p class="deck-warn">This deletes the deck and its '+n+(n===1?' card':' cards')+'. Tap Delete again to confirm.</p>' : '') +
       '<div class="deck-actions">' +
         '<button class="btn primary small lead-btn" data-action="'+(isActive?'study-deck':'activate-deck')+'">'+icon(isActive?'layers':'check',20)+(isActive?'Study this deck':'Set as active')+'</button>' +
@@ -1986,7 +2536,7 @@ function renderCards(d){
       var isArmed = armed === c.id;
       return '<li class="row" data-id="'+esc(c.id)+'">' +
         '<div class="row-main"><div class="row-top"><strong>'+esc(c.word)+'</strong>'+(c.pos?'<span class="meta">['+esc(c.pos)+']</span>':'')+'</div>' +
-        '<p class="row-def">'+esc(c.definition || 'No definition yet')+'</p></div>' +
+        '<p class="row-def"'+(c.definitionZh ? ' lang="zh-Hant"' : '')+'>'+esc(c.definitionZh || c.definition || 'No definition yet')+'</p></div>' +
         '<div class="row-actions">' +
           '<button class="icon-btn" data-action="edit" aria-label="Edit '+esc(c.word)+'">'+icon('pencil',20)+'</button>' +
           '<button class="icon-btn'+(isArmed?' armed':'')+'" data-action="delete" aria-label="'+(isArmed?'Confirm delete ':'Delete ')+esc(c.word)+'">'+icon('trash',20)+(isArmed?'<span>Sure?</span>':'')+'</button>' +
@@ -2023,7 +2573,12 @@ function exportJson(d){
     if(c.reading) o.reading = c.reading;
     if(lg) o.lang = lg;
     o.pos = c.pos; o.phonetic = c.phonetic; o.definition = c.definition;
-    o.examples = c.sentences.map(function(s, i){ var en = (c.translations || [])[i]; return en ? {text:s, en:en} : s; });
+    if(c.definitionZh) o.definitionZh = c.definitionZh;
+    o.examples = c.sentences.map(function(s, i){
+      var en = (c.translations || [])[i], zh = (c.translationsZh || [])[i];
+      if(!en && !zh) return s;
+      var e = {text:s}; if(en) e.en = en; if(zh) e.zh = zh; return e;
+    });
     return o;
   }), null, 2);
 }
@@ -2045,15 +2600,28 @@ function openEditor(deckId, id){
     var o = document.createElement('option'); o.textContent = c.pos; el.fPos.appendChild(o); el.fPos.value = c.pos;
   }
   el.fDef.value = c ? c.definition : '';
+  el.fDefZh.value = c ? c.definitionZh || '' : '';
   el.fS1.value = c ? c.sentences[0] || '' : '';
   el.fT1.value = c ? (c.translations || [])[0] || '' : '';
   el.fS2.value = c ? c.sentences[1] || '' : '';
   el.fT2.value = c ? (c.translations || [])[1] || '' : '';
+  el.fTz1.value = c ? (c.translationsZh || [])[0] || '' : '';
+  el.fTz2.value = c ? (c.translationsZh || [])[1] || '' : '';
+  syncEditorLang();
   el.editError.textContent = '';
   el.sheetDelete.hidden = !c;
   updateSheetDelete();
   showSheet(el.sheet);
 }
+/* English cards show 繁體中文 only, so the English definition and translation fields are tucked away for them. */
+function syncEditorLang(){
+  var d = deckById(editDeckId) || {}, lang = el.fLang.value || d.lang || detectLang(el.fWord.value);
+  var en = String(lang).slice(0, 2).toLowerCase() === 'en';
+  el.fwDef.hidden = el.fwT1.hidden = el.fwT2.hidden = en;
+  el.fEnNote.hidden = !en;
+}
+el.fLang.addEventListener('change', syncEditorLang);
+el.fWord.addEventListener('input', syncEditorLang);
 function updateSheetDelete(){ el.sheetDeleteLabel.textContent = armed === 'sheet' ? 'Tap again to delete' : 'Delete card'; el.sheetDelete.classList.toggle('armed', armed === 'sheet'); }
 el.editForm.addEventListener('submit', function(e){
   e.preventDefault();
@@ -2064,11 +2632,16 @@ el.editForm.addEventListener('submit', function(e){
   if(dupe){ el.editError.textContent = 'That word is already in this deck.'; el.fWord.focus(); return; }
   var s1 = el.fS1.value.trim(), s2 = el.fS2.value.trim(), t1 = el.fT1.value.trim(), t2 = el.fT2.value.trim(), pos = el.fPos.value;
   var lang = el.fLang.value || d.lang || detectLang(word);
-  var fill = templateSentences(word, pos || guessPos(word), 0, lang);
+  var pairs = [[s1, t1, el.fTz1.value.trim()], [s2, t2, el.fTz2.value.trim()]].filter(function(r){ return r[0]; });
+  var useTpl = pairs.length === 0;     /* template sentences only when the learner wrote none */
+  if(useTpl) pairs = templateSentences(word, pos || guessPos(word), 0, lang).map(function(e){ return [e.text, e.en || '', '']; });
   var data = {word:word, reading:el.fReading.value.trim(), lang:el.fLang.value, phonetic:el.fPhon.value.trim(), pos:pos, definition:el.fDef.value.trim(),
-    sentences:[s1 || fill[0].text, s2 || fill[1].text], translations:[s1 ? t1 : (t1 || fill[0].en), s2 ? t2 : (t2 || fill[1].en)], auto:false, sample:false, updatedAt:Date.now()};
+    sentences:pairs.map(function(r){ return r[0]; }), translations:pairs.map(function(r){ return r[1]; }), auto:useTpl, sample:false, updatedAt:Date.now()};
+  data.definitionZh = el.fDefZh.value.trim();
+  data.translationsZh = pairs.map(function(r){ return r[2]; });
   if(editingId){
     var c = d.cards.filter(function(x){ return x.id === editingId; })[0];
+    data.zhAuto = !!(c && c.zhAuto && c.definitionZh === data.definitionZh);
     if(c) Object.keys(data).forEach(function(k){ c[k] = data[k]; });
     toast('Card saved');
   } else {
@@ -2087,14 +2660,14 @@ function setStatus(msg, pct, warn){
 }
 function pickStr(x){ return (typeof x === 'string') ? x.trim() : ''; }
 function normEx(e){
-  if(typeof e === 'string'){ e = e.trim(); return e ? {text:e, en:''} : null; }
+  if(typeof e === 'string'){ e = e.trim(); return e ? {text:e, en:'', zh:''} : null; }
   if(e && typeof e === 'object'){
     var t = pickStr(e.text || e.sentence || e.target || e.ja || e.jp || e.ko);
-    return t ? {text:t, en:pickStr(e.en || e.english || e.translation)} : null;
+    return t ? {text:t, en:pickStr(e.en || e.def_en || e.translation || e.english), zh:pickStr(e.zh || e.def_zh || e.zh_tw || e.translationZh || e.zhTW || e.chinese || e.tc)} : null;
   }
   return null;
 }
-function plainItem(w){ return {word:String(w).trim(), reading:'', lang:'', definition:'', pos:'', phonetic:'', examples:[]}; }
+function plainItem(w){ return {word:String(w).trim(), reading:'', lang:'', definition:'', definitionZh:'', pos:'', phonetic:'', examples:[]}; }
 function normalizeObj(x){
   var ex = x.examples || x.sentences || x.example || [];
   if(!Array.isArray(ex)) ex = [ex];
@@ -2102,7 +2675,8 @@ function normalizeObj(x){
     word: pickStr(x.word || x.term || x.front),
     reading: pickStr(x.reading || x.furigana || x.kana || x.romaji || x.romanization),
     lang: normLang(x.lang || x.language),
-    definition: pickStr(x.definition || x.def || x.meaning || x.back),
+    definition: pickStr(x.definition || x.def || x.def_en || x.defEn || x.meaning || x.en || x.back),
+    definitionZh: pickStr(x.definitionZh || x.def_zh || x.defZh || x.zh || x.chinese || x.definition_zh || x.zh_tw || x.zhTW || x.tc || x.meaningZh),
     pos: normPos(pickStr(x.pos || x.partOfSpeech)),
     phonetic: pickStr(x.phonetic || x.ipa),
     examples: ex.map(normEx).filter(Boolean)
@@ -2162,6 +2736,22 @@ function lookup(word){
     .then(function(res){ clearTimeout(timer); return res; });
 }
 
+/* Best-effort online translation (MyMemory). Returns '' when nothing usable came back and null when the service is unreachable. */
+function translateText(text, from, to){
+  var ctl = ('AbortController' in window) ? new AbortController() : null;
+  var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, 4500);
+  return fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + from + '|' + to, ctl ? {signal:ctl.signal} : {})
+    .then(function(r){ if(!r.ok) throw new Error('http'); return r.json(); })
+    .then(function(j){
+      var t = j && j.responseData && j.responseData.translatedText;
+      t = typeof t === 'string' ? t.trim() : '';
+      if(!t || /MYMEMORY|INVALID|QUERY LENGTH/i.test(t) || t.toLowerCase() === text.toLowerCase()) return '';
+      if(to === 'zh-TW' && !/[\u3400-\u9fff]/.test(t)) return '';
+      return t;
+    })
+    .catch(function(){ return null; })
+    .then(function(res){ clearTimeout(timer); return res; });
+}
 function buildCard(item, useApi, api, deckLang){
   var key = item.word.toLowerCase(), lex = LEX[key] || null;
   var lang = item.lang || deckLang || (lex && lex.lang) || detectLang(item.word);
@@ -2169,25 +2759,33 @@ function buildCard(item, useApi, api, deckLang){
   if(lex && lex.lang.slice(0, 2) !== lang.slice(0, 2)) lex = null;
   var needApi = isEn && useApi && !api.down && !(item.definition && item.examples.length >= 2) && !lex;
   var p = needApi ? lookup(item.word) : Promise.resolve(null);
-  return p.then(function(res){
-    var a = null;
+  var lex0 = lex, hasZh = !!(item.definitionZh || (lex0 && lex0.zh));
+  var needZh = useApi && !api.trDown && !hasZh, base0 = lang.slice(0, 2).toLowerCase();
+  var pz = needZh ? translateText(item.word, base0, 'zh-TW') : Promise.resolve('');
+  var needEn = useApi && !api.trDown && !isEn && !item.definition && !(lex0 && lex0.definition);
+  var pe = needEn ? translateText(item.word, base0, 'en') : Promise.resolve('');
+  return Promise.all([p, pz, pe]).then(function(all){
+    var res = all[0], zhRes = all[1], enRes = all[2], a = null;
+    if(zhRes === null || enRes === null) api.trDown = true;
+    var zhAuto = false, zhDef = item.definitionZh || (lex0 && lex0.zh) || '';
+    if(!zhDef && zhRes){ zhDef = zhRes; zhAuto = true; api.zhHits = (api.zhHits || 0) + 1; }
     if(res){ if(res.error) api.down = true; else if(!res.notFound){ a = res; api.hits++; } }
     var pos = item.pos || (lex && lex.pos) || (a && a.pos) || guessPos(item.word);
     var phon = item.phonetic || (lex && lex.phonetic) || (a && a.phonetic) || '';
     var reading = item.reading || (lex && lex.reading) || '';
-    var def = item.definition || (lex && lex.definition) || (a && a.definition) || '';
-    var pool = [].concat(item.examples, lex ? lex.sentences : [], a ? a.examples.map(function(x){ return {text:x, en:''}; }) : []);
+    var def = item.definition || (lex && lex.definition) || (a && a.definition) || enRes || '';
+    var pool = [].concat(item.examples, lex ? lex.sentences : [], a ? a.examples.map(function(x){ return {text:x, en:'', zh:''}; }) : []);
     var picked = [], seen = {};
     pool.forEach(function(e){ var k = e.text.toLowerCase(); if(picked.length < 2 && !seen[k]){ seen[k] = 1; picked.push(e); } });
     var auto = false;
-    if(picked.length < 2){
+    if(picked.length === 0){            /* templates only when there is no real example at all */
       auto = true;
       templateSentences(item.word, pos, 0, lang).forEach(function(e){
         if(picked.length < 2 && !seen[e.text.toLowerCase()]){ seen[e.text.toLowerCase()] = 1; picked.push(e); }
       });
     }
-    return {id:uid(), word:item.word, reading:reading, lang:item.lang || '', phonetic:phon, pos:pos, definition:def,
-      sentences:picked.map(function(e){ return e.text; }), translations:picked.map(function(e){ return e.en; }), auto:auto, sample:false};
+    return {id:uid(), word:item.word, reading:reading, lang:item.lang || '', phonetic:phon, pos:pos, definition:def, definitionZh:zhDef, zhAuto:zhAuto,
+      sentences:picked.map(function(e){ return e.text; }), translations:picked.map(function(e){ return e.en || ''; }), translationsZh:picked.map(function(e){ return e.zh || ''; }), auto:auto, sample:false};
   });
 }
 
@@ -2196,7 +2794,7 @@ function renderTargetSelect(){
   opts.push('<option value="__new__">+ Create new deck…</option>');
   var prev = el.targetDeck.value;
   el.targetDeck.innerHTML = opts.join('');
-  var v = (targetDirty && (prev === '__new__' || deckById(prev))) ? prev : state.activeDeckId;
+  var v = !state.decks.length ? '__new__' : (targetDirty && (prev === '__new__' || deckById(prev))) ? prev : state.activeDeckId;
   el.targetDeck.value = v;
   el.newDeckField.hidden = v !== '__new__';
 }
@@ -2222,7 +2820,7 @@ function processWords(){
     deckLang = tdeck.lang;
   }
   busy = true; el.processBtn.disabled = true; el.processBtn.textContent = 'Processing…';
-  var useApi = el.lookup.checked, api = {down:false, hits:0};
+  var useApi = el.lookup.checked, api = {down:false, hits:0, trDown:false, zhHits:0};
   var have = {}; (tdeck ? tdeck.cards : []).forEach(function(c){ if(!c.sample) have[c.word.toLowerCase()] = 1; });
   var list = items.slice(0, 300), made = [], dupes = 0, seen = {}, i = 0;
   function next(){
@@ -2249,6 +2847,7 @@ function processWords(){
     if(items.length > 300) parts.push('only the first 300 words were used');
     if(useApi && api.down) parts.push('online lookup unavailable, used the built-in word list and templates');
     else if(useApi && api.hits) parts.push(api.hits + ' from the online dictionary');
+    if(useApi && api.zhHits) parts.push(api.zhHits + ' translated to 繁體中文 online');
     setStatus(parts.join(' · ') + '.', 1, !made.length);
     if(made.length){ el.words.value = ''; toast('Added ' + made.length + (made.length === 1 ? ' card' : ' cards')); showTab('study'); }
   }).catch(function(){
@@ -2261,15 +2860,817 @@ function processWords(){
 /* ---------- tabs & render ---------- */
 function showTab(name){
   tab = name;
-  ['study','build','manage'].forEach(function(t){ $('#screen-' + t).hidden = (t !== name); });
+  ['altar','study','build','manage'].forEach(function(t){ $('#screen-' + t).hidden = (t !== name); });
   $$('.tab').forEach(function(b){ if(b.getAttribute('data-tab') === name) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(name !== 'study' && synth && (synth.speaking || synth.pending)) synth.cancel();
-  if(name === 'study') renderStudy();
+  if(name === 'altar') renderAltar();
+  if(name === 'study'){ autoAdvanceDeck(); renderStudy(); }
   if(name === 'build') renderTargetSelect();
   if(name === 'manage'){ el.exportBox.hidden = true; renderManage(); }
 }
+/* ---------- language expedition ---------- */
+var ZONES = ['Beginner Foundation', 'Daily Conversation', 'Intermediate Immersion', 'Advanced Fluency', 'Near-Native Mastery'];
+var ZONE_ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+var LEVELS = [
+  {name:'Absolute Beginner', min:0, max:100, desc:"You recognise your first words and basic phrases to introduce yourself."},
+  {name:'Beginner I', min:100, max:250, desc:"Able to handle basic numbers, greetings, and common simple needs."},
+  {name:'Beginner II', min:250, max:450, desc:"Able to read short signs, menus, labels, and ask simple directions."},
+  {name:'Beginner III', min:450, max:700, desc:"Able to follow slow, clear speech and write short messages about daily life."},
+  {name:'Elementary I', min:700, max:1000, desc:"Able to hold basic conversations about yourself, routines, and family."},
+  {name:'Elementary II', min:1000, max:1400, desc:"Able to travel independently, handle shopping, and common public situations."},
+  {name:'Pre-Intermediate I', min:1400, max:1900, desc:"Able to read graded readers and short articles with only occasional lookups."},
+  {name:'Pre-Intermediate II', min:1900, max:2500, desc:"Able to follow slow podcasts, simple vlogs, and children's media."},
+  {name:'Intermediate I', min:2500, max:3200, desc:"Able to watch slice-of-life anime and YouTube vlogs with target subtitles."},
+  {name:'Intermediate II', min:3200, max:4000, desc:"Able to chat comfortably with native speakers and read social media posts."},
+  {name:'Intermediate III', min:4000, max:4900, desc:"Able to follow most everyday TV dramas and variety shows with ease."},
+  {name:'Upper-Intermediate I', min:4900, max:5800, desc:"Able to read manga, light novels, and news headlines without constant lookups."},
+  {name:'Upper-Intermediate II', min:5800, max:6800, desc:"Able to discuss work, hobbies, and personal opinions in extended conversations."},
+  {name:'Pre-Advanced', min:6800, max:7800, desc:"Able to follow native-speed media on familiar topics without subtitles."},
+  {name:'Advanced I', min:7800, max:8800, desc:"Able to read full novels and long-form articles comfortably for pleasure."},
+  {name:'Advanced II', min:8800, max:9800, desc:"Able to follow debates, interviews, and documentaries with ease."},
+  {name:'Mastery I', min:9800, max:11000, desc:"Able to read specialized material in your field and express nuanced views."},
+  {name:'Mastery II', min:11000, max:12500, desc:"Able to catch subtle humor, slang, idioms, and natural register shifts."},
+  {name:'Mastery III', min:12500, max:14000, desc:"Able to read and watch nearly anything, meeting only rare unknown words."},
+  {name:'Near-Native', min:14000, max:null, desc:"Near-native breadth: vocabulary is no longer a limiting barrier in any content."}
+];
+var LANG_META = {
+  ja:{flag:'🇯🇵', name:'Japanese', short:'JA'},
+  ko:{flag:'🇰🇷', name:'Korean', short:'KO'},
+  en:{flag:'🇺🇸', name:'English', short:'EN'}
+};
+var mapView = {lang:'ja', sel:-1};
+function fmtN(n){ try{ return Number(n).toLocaleString('en-US'); }catch(e){ return String(n); } }
+/* base language ('en'|'ja'|'ko') of a deck: its own tag, else the majority of its cards, else English */
+function deckBase(d){
+  if(d && d.lang) return String(d.lang).slice(0, 2).toLowerCase();
+  var cnt = {}, best = 'en', bn = 0;
+  ((d && d.cards) || []).forEach(function(c){ var b = String(c.lang || detectLang(c.word) || 'en').slice(0, 2).toLowerCase(); cnt[b] = (cnt[b] || 0) + 1; if(cnt[b] > bn){ bn = cnt[b]; best = b; } });
+  return ALT_META[best] ? best : 'en';
+}
+function cardBase(c, d){ return String(langFor(c, c.word, d) || 'en').slice(0, 2).toLowerCase(); }
+/* A card counts as mastered once it has been retained across a 21+ day recall window (interval >= 21). Sample cards never count. */
+function isMastered(c){ return c.interval >= 21; }
+function masteredCounts(){
+  var o = {ja:0, ko:0, en:0};
+  state.decks.forEach(function(d){
+    d.cards.forEach(function(c){
+      if(c.sample || !isMastered(c)) return;
+      var b = cardBase(c, d);
+      if(o[b] !== undefined) o[b]++;
+    });
+  });
+  return o;
+}
+function expTotals(){ return masteredCounts(); }      /* words mastered = mastered cards per language, nothing else */
+function levelIndex(total){
+  var i = 0;
+  for(var k = 0; k < LEVELS.length; k++){ if(total >= LEVELS[k].min) i = k; }
+  return i;
+}
+function levelState(total, i){
+  var lv = LEVELS[i];
+  if(lv.max !== null && total >= lv.max) return 'done';
+  return total >= lv.min ? 'cur' : 'lock';
+}
+function expLevels(){
+  var t = expTotals(), o = {};
+  LANG_ORDER.forEach(function(k){ o[k] = levelIndex(t[k]); });
+  return o;
+}
+function renderPills(){
+  var t = expTotals();
+  LANG_ORDER.forEach(function(k){
+    var n = $('#pill-' + k);
+    if(n){
+      n.textContent = fmtN(t[k]);
+      var b = n.closest ? n.closest('button') : null;
+      if(b) b.setAttribute('aria-label', LANG_META[k].name + ': ' + fmtN(t[k]) + ' words. Open expedition map');
+    }
+  });
+}
+function renderExpedition(){
+  renderPills();
+  if(!el.mapSheet.hidden) renderMap(false);
+}
+
+/* map geometry */
+var MAP_STEP = 122, MAP_ZONE_GAP = 92, MAP_TOP = 120;
+function nodeY(i){ return MAP_TOP + i * MAP_STEP + Math.floor(i / 4) * MAP_ZONE_GAP; }
+function nodeX(i, W){
+  var amp = Math.min(W * 0.3, 118);
+  return Math.round(W / 2 + amp * Math.sin(i * 1.12 + 0.35));
+}
+function mapHeight(){ return nodeY(LEVELS.length - 1) + 150; }
+
+/* ---------- retro 16-bit RPG backdrop: drawn once per size on a tiny canvas, scaled up with nearest-neighbour ----------
+   Level 1 sits at the top of the map, so the world runs wasteland -> plains -> forest -> mountains -> dusk clouds -> deep space as you scroll down. */
+var MAP_PX = 6, mapBgCache = {key:'', url:''};
+function hexRgb(h){ return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+function paintMapBg(W, H){
+  var key = W + 'x' + H; if(mapBgCache.key === key) return mapBgCache.url;
+  var url = '';
+  try{
+    var cw = Math.max(8, Math.ceil(W / MAP_PX)), ch = Math.max(8, Math.ceil(H / MAP_PX));
+    var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+    var ctx = cv.getContext('2d'), img = ctx.createImageData(cw, ch), px = img.data;
+    var seed = 20241024;
+    function rnd(){ seed = (seed + 0x6D2B79F5) | 0; var t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    function ri(a, b){ return a + Math.floor(rnd() * (b - a + 1)); }
+    function set(x, y, c){ x = Math.round(x); y = Math.round(y); if(x < 0 || y < 0 || x >= cw || y >= ch) return; var o = (y * cw + x) * 4; px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255; }
+    var BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    /* a = altitude along the journey: 0 = wasteland at the top of the map ... 1 = deep space at the bottom */
+    function R(a){ return Math.round(a * (ch - 1)); }
+    function rr(a, b){ return ri(R(a), R(b)); }
+    var PAL = ['#4a3322', '#5a4126', '#4a4a2a', '#2e4a2a', '#214a3c', '#2b5a6a', '#35407e', '#26276a', '#171a48', '#0d1030', '#070918', '#03040b'].map(hexRgb);
+    var n = PAL.length - 1, x, y, i, k, q, dx, dy;
+    for(y = 0; y < ch; y++){
+      var v = y / (ch - 1) * n, i0 = Math.min(n - 1, Math.floor(v)), fr = v - i0;
+      for(x = 0; x < cw; x++) set(x, y, (fr * 16 > BAY[y & 3][x & 3] + .5) ? PAL[i0 + 1] : PAL[i0]);
+    }
+    /* wasteland (a .00-.20): rocks, cracks, dead trees, cacti */
+    var RK = ['#6b5a45', '#8a765b', '#3a2c1e'].map(hexRgb), CR = hexRgb('#2b1d14'), DT = hexRgb('#2a1d14'), CA = ['#2d5a2a', '#417a38'].map(hexRgb);
+    var nr = Math.round(cw * R(.2) / 70);
+    for(i = 0; i < nr; i++){
+      var rx = ri(1, cw - 4), ry = rr(.01, .2), rw = ri(2, 4);
+      for(x = 0; x < rw; x++){ set(rx + x, ry, RK[x === 0 ? 1 : 0]); if(x > 0 && x < rw - 1) set(rx + x, ry - 1, RK[1]); set(rx + x, ry + 1, RK[2]); }
+    }
+    for(i = 0; i < Math.round(nr / 3); i++){
+      var kx = ri(2, cw - 3), ky = rr(.01, .2), len = ri(6, 14);
+      for(k = 0; k < len; k++){ set(kx, ky, CR); kx += ri(-1, 1); ky += (rnd() < .5 ? 1 : 0); }
+    }
+    for(i = 0; i < Math.max(3, Math.round(nr / 6)); i++){
+      var ex = ri(3, cw - 4), ey = rr(.03, .2), eh = ri(6, 9);
+      for(q = 0; q < eh; q++) set(ex, ey - q, DT);
+      for(q = 1; q < 4; q++){ set(ex - q, ey - eh + 2 + (q > 2 ? -1 : 0), DT); set(ex + q, ey - eh + 3 - (q > 2 ? 1 : 0), DT); }
+    }
+    for(i = 0; i < Math.max(2, Math.round(nr / 8)); i++){
+      var ax = ri(3, cw - 4), ay = rr(.04, .2), ah = ri(4, 6);
+      for(q = 0; q < ah; q++) set(ax, ay - q, CA[q % 2]);
+      set(ax - 1, ay - 3, CA[1]); set(ax - 2, ay - 3, CA[1]); set(ax - 2, ay - 4, CA[1]); set(ax + 1, ay - 2, CA[1]); set(ax + 2, ay - 2, CA[1]); set(ax + 2, ay - 3, CA[1]);
+    }
+    /* pine forest (a .26-.42) */
+    var TG = ['#123420', '#1d5232'].map(hexRgb), TR = hexRgb('#3b2a1a'), BU = hexRgb('#2a5a30'), nt = Math.round(cw * (R(.42) - R(.26)) / 55);
+    for(i = 0; i < nt; i++){
+      var tx = ri(1, cw - 2), ty = rr(.27, .42), th = ri(6, 10), r;
+      for(r = 0; r < th; r++){ var wdt = Math.floor(r * .55) + 1; for(dx = -wdt; dx <= wdt; dx++) set(tx + dx, ty - th + r, TG[dx < 0 && r % 2 === 0 ? 1 : 0]); }
+      set(tx, ty, TR); set(tx, ty + 1, TR);
+    }
+    for(i = 0; i < Math.round(nt / 2); i++){ var bx2 = ri(1, cw - 3), by2 = rr(.22, .38); set(bx2, by2, BU); set(bx2 + 1, by2, BU); set(bx2 + 2, by2, BU); set(bx2 + 1, by2 - 1, BU); }
+    /* snow-capped mountain ranges (a .44-.56) */
+    function ridge(base, amp, col, snow, ph){
+      var w1 = rnd() * 6 + ph, w2 = rnd() * 6, w3 = rnd() * 6, xx, yy;
+      for(xx = 0; xx < cw; xx++){
+        var h = Math.sin(xx / 5 + w1) * .5 + Math.sin(xx / 2.3 + w2) * .3 + Math.sin(xx / 11 + w3) * .6 + (rnd() - .5) * .35;
+        var top = Math.round(base - (h + 1) * amp / 2);
+        for(yy = top; yy < base + 14 && yy < ch; yy++) set(xx, yy, col);
+        if(snow && h > .35){ set(xx, top, snow); set(xx, top + 1, snow); if(h > .7) set(xx, top + 2, snow); }
+      }
+    }
+    ridge(R(.5), R(.075), hexRgb('#16291f'), null, 3);
+    ridge(R(.55), R(.08), hexRgb('#1c3347'), hexRgb('#cfe0f5'), 1);
+    /* dusk clouds (a .58-.72) */
+    var CL = ['#7587c2', '#4f5f9a'].map(hexRgb);
+    for(i = 0; i < Math.max(5, Math.round(ch / 140)); i++){
+      var cx = ri(2, cw - 3), cy = rr(.6, .72), blobs = ri(3, 5);
+      for(k = 0; k < blobs; k++){
+        var bx = cx + (k - blobs / 2) * 4 + ri(-1, 1), bw = ri(3, 5), bh = ri(1, 2);
+        for(dy = -bh; dy <= bh; dy++) for(dx = -bw; dx <= bw; dx++){
+          if((dx * dx) / (bw * bw) + (dy * dy) / (bh * bh + .5) > 1) continue;
+          set(bx + dx, cy + dy, CL[dy >= bh ? 1 : 0]);
+        }
+      }
+      for(dx = -blobs * 2; dx <= blobs * 2; dx++) if(BAY[cy & 3][(cx + dx) & 3] < 8) set(cx + dx, cy + 3, CL[1]);
+    }
+    /* deep space (a .74-1): nebula, stars, ringed planet, moon */
+    var sp0 = R(.72), sph = Math.max(2, ch - sp0), gx = Math.ceil(cw / 7) + 2, gy = Math.ceil(sph / 7) + 2, grid = [];
+    for(y = 0; y < gy; y++){ grid[y] = []; for(x = 0; x < gx; x++) grid[y][x] = rnd(); }
+    function noise(fx, fy){ var x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0, a = grid[y0][x0], b = grid[y0][x0 + 1], c = grid[y0 + 1][x0], d = grid[y0 + 1][x0 + 1]; return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty; }
+    var NEB = ['#2a1650', '#43206e'].map(hexRgb);
+    for(y = sp0; y < ch; y++) for(x = 0; x < cw; x++){
+      var nv = noise(x / 7, (y - sp0) / 7) * (.5 + .5 * (y - sp0) / sph);
+      if(nv > .6 + BAY[y & 3][x & 3] / 80) set(x, y, NEB[nv > .72 ? 1 : 0]);
+    }
+    var STAR = ['#ffffff', '#cfe3ff', '#fde68a', '#a5b4fc'].map(hexRgb), SG = hexRgb('#8aa0d8'), nst = Math.round(cw * sph * .012);
+    for(i = 0; i < nst; i++){
+      var sx = ri(0, cw - 1), sy = ri(sp0 + 3, ch - 1);
+      set(sx, sy, STAR[ri(0, 3)]);
+      if(rnd() < .1){ set(sx - 1, sy, SG); set(sx + 1, sy, SG); set(sx, sy - 1, SG); set(sx, sy + 1, SG); }
+    }
+    var pcx = Math.round(cw * .74), pcy = R(.9), pr = Math.max(5, Math.round(cw * .075)), d2;
+    function ring(front){
+      for(dy = -pr; dy <= pr; dy++) for(dx = -pr * 2; dx <= pr * 2; dx++){
+        var e = (dx * dx) / (pr * 1.9 * pr * 1.9) + (dy * dy) / (pr * .5 * pr * .5);
+        if(e > .8 && e < 1.1 && ((dy > 0) === front)) set(pcx + dx, pcy + dy, hexRgb(e < .93 ? '#c9a8ff' : '#7a5bd0'));
+      }
+    }
+    ring(false);
+    for(dy = -pr; dy <= pr; dy++) for(dx = -pr; dx <= pr; dx++){
+      d2 = dx * dx + dy * dy; if(d2 > pr * pr) continue;
+      var sh = (dx + dy * .8) / (pr * 1.6), pc = sh < -.35 ? '#c9a8ff' : sh < .05 ? '#8a5fd1' : sh < .4 ? '#5a3a99' : '#3b2470';
+      if(BAY[dy & 3][dx & 3] < 3 && sh > -.05 && sh < .15) pc = '#5a3a99';
+      set(pcx + dx, pcy + dy, hexRgb(pc));
+    }
+    ring(true);
+    var mcx = Math.round(cw * .2), mcy = R(.8), mr = Math.max(3, Math.round(cw * .04));
+    for(dy = -mr; dy <= mr; dy++) for(dx = -mr; dx <= mr; dx++){
+      if(dx * dx + dy * dy > mr * mr) continue;
+      set(mcx + dx, mcy + dy, hexRgb((dx + dy) < -mr * .3 ? '#e4e8f5' : (dx * 3 + dy * 2) % 5 === 0 ? '#7f89a8' : '#b4bcd4'));
+    }
+    ctx.putImageData(img, 0, 0);
+    url = cv.toDataURL('image/png');
+  }catch(e){ url = ''; try{ window.__mapBgErr = String(e && e.stack || e); }catch(_){} }
+  mapBgCache.key = key; mapBgCache.url = url;
+  return url;
+}
+function renderMap(recenter){
+  var L = mapView.lang, t = expTotals(), tot = t[L], cur = levelIndex(tot);
+  LANG_ORDER.forEach(function(k){
+    var tab = $('#mtab-' + k), n = $('#mtot-' + k);
+    if(n) n.textContent = fmtN(t[k]);
+    if(tab){ tab.classList.toggle('is-on', k === L); tab.setAttribute('aria-selected', k === L ? 'true' : 'false'); }
+  });
+  el.mapStats.innerHTML = '<b>' + esc(LANG_META[L].name) + '</b> &middot; Lv. ' + (cur + 1) + ' ' + esc(LEVELS[cur].name);
+  var W = el.mapScroll.clientWidth || 360, H = mapHeight(), i, out = [];
+  var pts = LEVELS.map(function(_, k){ return {x:nodeX(k, W), y:nodeY(k)}; });
+  /* background constellation */
+  var seed = 7, stars = [];
+  for(i = 0; i < 34; i++){
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    var sx = seed % W; seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    var sy = seed % H, sr = 0.6 + (seed % 5) / 5;
+    void sr;      /* stars now live in the pixel backdrop */
+  }
+  var base = [], lit = [];
+  for(i = 0; i < LEVELS.length - 1; i++){
+    var a = pts[i], b = pts[i + 1], dy = b.y - a.y;
+    var d = 'M' + a.x + ' ' + a.y + ' C' + a.x + ' ' + (a.y + dy * 0.55) + ' ' + b.x + ' ' + (b.y - dy * 0.55) + ' ' + b.x + ' ' + b.y;
+    var f = tot >= LEVELS[i + 1].min ? 1 : (i === cur ? Math.max(0, Math.min(1, (tot - LEVELS[i].min) / (LEVELS[i].max - LEVELS[i].min))) : 0);
+    base.push('<path class="mpath-shadow" d="' + d + '"/><path class="mpath-base" d="' + d + '"/>');
+    if(f > 0) lit.push('<path class="mpath-lit" d="' + d + '" pathLength="1" stroke-dasharray="' + f.toFixed(4) + ' 2"/>');
+  }
+  out.push('<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><defs><linearGradient id="mgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2d9c8"/><stop offset="1" stop-color="#fcd34d"/></linearGradient></defs>' +
+    stars.join('') + base.join('') + lit.join('') + '</svg>');
+  /* zone headings */
+  for(var z = 0; z < ZONES.length; z++){
+    var first = z * 4, zy = z === 0 ? nodeY(0) - 78 : (nodeY(first - 1) + nodeY(first)) / 2;
+    out.push('<div class="mzone' + (tot < LEVELS[first].min ? ' is-lock' : '') + '" style="top:' + zy + 'px"><span>ZONE ' + ZONE_ROMAN[z] + ' &middot; ' + esc(ZONES[z].toUpperCase()) + '</span></div>');
+  }
+  /* stations */
+  for(i = 0; i < LEVELS.length; i++){
+    var lv = LEVELS[i], st = levelState(tot, i), p = pts[i];
+    var inner = st === 'done' ? icon('check', 26) : st === 'cur' ? String(i + 1) : icon('lock', 20);
+    var cnt = lv.min === 0 ? 'Start' : fmtN(lv.min) + ' words';
+    var status = st === 'done' ? 'conquered' : st === 'cur' ? 'current station' : 'locked';
+    out.push('<button class="mnode is-' + st + (mapView.sel === i ? ' is-sel' : '') + '" style="left:' + p.x + 'px;top:' + p.y + 'px" data-action="map-node" data-lv="' + i + '" aria-label="Level ' + (i + 1) + ', ' + esc(lv.name) + ', ' + status + '">' +
+      (st === 'cur' ? '<span class="radar"></span><span class="radar r2"></span><span class="mpin">YOU ARE HERE</span>' : '') +
+      '<span class="disc">' + inner + '</span>' +
+      '<span class="mlabel"><b>' + esc(lv.name) + '</b><small>' + cnt + '</small></span></button>');
+  }
+  el.mapTrack.style.height = H + 'px';
+  var bgUrl = paintMapBg(W, H);
+  if(bgUrl){ el.mapTrack.style.backgroundImage = 'linear-gradient(rgba(0,0,0,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.2) 1px,transparent 1px),url(' + bgUrl + ')'; }
+  el.mapTrack.innerHTML = out.join('');
+  renderInspect();
+  if(recenter) centerOnCurrent(cur, H);
+}
+function centerOnCurrent(cur, H){
+  var sc = el.mapScroll, ch = sc.clientHeight || 500;
+  var target = Math.max(0, Math.min(Math.max(0, H - ch), nodeY(cur) - ch * 0.5));
+  var go = function(){
+    try{
+      if(REDUCED || typeof sc.scrollTo !== 'function'){ sc.scrollTop = target; return; }
+      sc.scrollTop = Math.max(0, target - 260);                    /* start close so the glide is short and always visible */
+      sc.scrollTo({top:target, behavior:'smooth'});
+    }catch(e){ sc.scrollTop = target; }
+  };
+  if(typeof requestAnimationFrame === 'function') requestAnimationFrame(function(){ requestAnimationFrame(go); }); else go();
+}
+function renderInspect(){
+  var i = mapView.sel;
+  if(i < 0){ el.inspect.hidden = true; el.inspect.innerHTML = ''; return; }
+  var L = mapView.lang, tot = expTotals()[L], lv = LEVELS[i], st = levelState(tot, i), pct, rem;
+  if(st === 'done'){ pct = 100; rem = 'Milestone conquered &middot; <b>' + fmtN(tot - lv.max) + '</b> words beyond it'; }
+  else if(st === 'cur'){
+    if(lv.max === null){ pct = 100; rem = 'Final station reached &middot; <b>' + fmtN(tot - lv.min) + '</b> words beyond the summit gate'; }
+    else { pct = Math.round((tot - lv.min) / (lv.max - lv.min) * 100); rem = '<b>' + fmtN(lv.max - tot) + '</b> words remaining to complete this level'; }
+  } else { pct = 0; rem = '<b>' + fmtN(lv.min - tot) + '</b> words remaining to reach this milestone'; }
+  var range = lv.max === null ? fmtN(lv.min) + '+ words' : fmtN(lv.min) + ' – ' + fmtN(lv.max) + ' words';
+  var chip = st === 'done' ? '<span class="chip done">' + icon('check', 12) + 'Completed</span>' : st === 'cur' ? '<span class="chip cur">In Progress</span>' : '<span class="chip lock">' + icon('lock', 12) + 'Locked</span>';
+  el.inspect.innerHTML =
+    '<div class="ins-top"><div><div class="ins-title">Lv. ' + (i + 1) + ' &middot; ' + esc(lv.name) + '</div><div class="ins-range">[' + range + ']</div></div>' +
+    '<button class="icon-btn" data-action="map-inspect-close" aria-label="Close details"><span>' + icon('x', 22) + '</span></button></div>' +
+    '<div>' + chip + '</div>' +
+    '<div class="ins-lbl">Real-World Mastery</div><div class="ins-desc">' + esc(lv.desc) + '</div>' +
+    '<div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="ins-rem">' + rem + '</div>';
+  el.inspect.hidden = false;
+}
+function selectNode(i){
+  mapView.sel = (mapView.sel === i) ? -1 : i;
+  $$('.mnode').forEach(function(n){
+    n.classList.toggle('is-sel', Number(n.getAttribute('data-lv')) === mapView.sel);
+  });
+  renderInspect();
+}
+function openMap(trigger, lang){
+  lastFocus = trigger || document.activeElement;
+  if(LANG_META[lang]) mapView.lang = lang;
+  mapView.sel = -1;
+  el.mapSheet.hidden = false;
+  renderMap(true);
+  try{ el.mapSheet.focus(); }catch(e){}
+}
+function setMapLang(lang){
+  if(!LANG_META[lang] || lang === mapView.lang) return;
+  mapView.lang = lang; mapView.sel = -1;
+  renderMap(true);
+}
+/* ---------- three-flame altar + ritual portal ---------- */
+var ALT_META = {
+  en:{flag:'🇺🇸', code:'EN', name:'English', native:'English'},
+  ja:{flag:'🇯🇵', code:'JP', name:'Japanese', native:'日本語'},
+  ko:{flag:'🇰🇷', code:'KO', name:'Korean', native:'한국어'}
+};
+var lastLit = {};
+function targetMin(k){ return Math.round(state.dailyTargets[k].hours * 60); }
+function inputDone(k){ return state.dailyProgress[k].inputMinutes >= targetMin(k); }
+function isLit(k){ var p = state.dailyProgress[k]; return inputDone(k) && p.deckDone && p.outputDone; }
+function litCount(){ return ALTAR_LANGS.filter(isLit).length; }
+/* Cards of one language that still need review today: never reviewed, or due. Sample cards are demo content and never count. */
+function dueCountLang(k){
+  var now = Date.now(), n = 0;
+  state.decks.forEach(function(d){
+    d.cards.forEach(function(c){
+      if(c.sample || cardBase(c, d) !== k) return;
+      if(!c.dueDate || Date.parse(c.dueDate) <= now) n++;
+    });
+  });
+  return n;
+}
+/* Brings the day up to date: rolls over at midnight, marks vocabulary done once nothing is due, and credits the master streak when all three flames are lit.
+   silent = just resync, do not report transitions. */
+function evaluateDay(silent){
+  var res = {dirty:false, grew:0, newlyLit:[]};
+  if(rolloverDay()){ res.dirty = true; lastLit = {}; }
+  ALTAR_LANGS.forEach(function(k){
+    var p = state.dailyProgress[k];
+    if(!p.deckDone && dueCountLang(k) === 0){ p.deckDone = true; res.dirty = true; }
+  });
+  recalcLifetime();
+  ALTAR_LANGS.forEach(function(k){
+    var l = isLit(k);
+    if(l && !lastLit[k] && !silent) res.newlyLit.push(k);
+    lastLit[k] = l;
+  });
+  var s = state.streak, today = localDay(0);
+  if(litCount() === 3){
+    if(s.lastStudiedDate !== today){
+      s.streakCount = s.lastStudiedDate === localDay(-1) ? s.streakCount + 1 : 1;
+      s.lastStudiedDate = today; res.grew = s.streakCount; res.dirty = true;
+    }
+    if(s.completedDates.indexOf(today) < 0){ s.completedDates.push(today); s.completedDates.sort(); res.dirty = true; }
+  }
+  return res;
+}
+/* Called after anything the learner does that can light a flame. */
+function afterTracking(fromGrade){
+  var ev = evaluateDay(false);
+  save();
+  if(ev.grew){
+    popFlame();
+    toast('The Grand Flame ignites. ' + ev.grew + (ev.grew === 1 ? '-day streak started' : '-day streak'), 2800);
+    triggerHaptic([30, 60, 30, 60, 40]);
+    if(!fromGrade) celebrate();
+  } else if(ev.newlyLit.length){
+    var k = ev.newlyLit[0];
+    toast(ALT_META[k].flag + ' ' + ALT_META[k].name + ' flame lit · ' + litCount() + '/3', 2200);
+    triggerHaptic([20, 40, 20]);
+  }
+  renderStreak(); renderAltar();
+  if(!el.portal.hidden) renderPortal(ev.newlyLit.indexOf(portal.lang) >= 0);
+  return ev;
+}
+/* Derived changes (midnight rollover, vocabulary auto-complete) are stored on this device but are not counted as a learner edit, so a device that has done
+   nothing never overwrites the cloud. They reach the cloud with the next real change. */
+function settleDay(){
+  var pre = (syncSig() === lastSig), ev = evaluateDay(true);
+  if(ev.dirty){ if(pre) lastSig = syncSig(); persist(); }
+  return ev;
+}
+function tickDay(){
+  if(document.visibilityState === 'hidden') return;
+  if(settleDay().dirty) renderAll(); else renderStreak();
+}
+function fmtHrs(n){ return (Math.round(n * 10) / 10).toFixed(1); }
+function fmtTarget(k){ return fmtHrs(state.dailyTargets[k].hours); }
+/* minutes -> "1h 12m" | "1h" | "30m"  (0 -> "0m") */
+function fmtDur(min){
+  min = Math.max(0, Math.round(Number(min) || 0));
+  var h = Math.floor(min / 60), m = min % 60;
+  if(h && m) return h + 'h ' + m + 'm';
+  return h ? h + 'h' : m + 'm';
+}
+/* decimal hours -> same format (1.2 -> "1h 12m") */
+function fmtDurHrs(hrs){ return fmtDur(Number(hrs) * 60); }
+function mercReadHtml(min, k){ return '<span class="rd-cur">' + fmtDur(min) + '</span> / ' + fmtDur(targetMin(k)); }
+
+function renderAltar(){
+  var lit = litCount(), credited = state.streak.lastStudiedDate === localDay(0), n = streakNow();
+  var flame = '<svg class="gf-flame i" viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS.flame + '</svg>';
+  var status = credited ? 'Grand Flame ignited' : lit + '/3 Flames Lit';
+  var h = '<div class="altar-top"><div class="grand ' + (credited ? 'lit' : 'dim') + '">' +
+    '<button class="gf" data-action="open-streak" aria-label="Grand Flame. ' + (credited ? 'Ignited today. ' : lit + ' of 3 flames lit. ') + n + ' day streak. Open calendar">' +
+      '<span class="gf-halo"></span><span class="gf-core"></span>' + flame +
+      '<span class="ember e1"></span><span class="ember e2"></span><span class="ember e3"></span></button>' +
+    '<div class="grand-count">' + n + '<small>day streak</small></div>' +
+    '<div class="grand-status" role="status">' + status + '</div></div></div>';
+  var xs = [50, 150, 250];
+  h += '<div class="altar-low"><svg class="conduits" viewBox="0 0 300 92" preserveAspectRatio="none" aria-hidden="true">' + ALTAR_LANGS.map(function(k, i){
+    return '<path class="cond' + (isLit(k) ? ' lit' : '') + '" d="M150 0 C150 46 ' + xs[i] + ' 46 ' + xs[i] + ' 92"/>';
+  }).join('') + '</svg>';
+  h += '<div class="orbs">' + ALTAR_LANGS.map(function(k){
+    var m = ALT_META[k], p = state.dailyProgress[k], inn = (inputDone(k) ? 1 : 0) + (p.deckDone ? 1 : 0), out = p.outputDone ? 1 : 0, on = isLit(k);
+    return '<button class="orb' + (on ? ' lit' : '') + '" data-action="open-portal" data-lang="' + k + '" aria-haspopup="dialog" aria-label="' + m.name + ': ' +
+      (on ? 'flame lit' : 'flame dormant') + ', ' + fmtHrs(state.lifetimeHours[k]) + ' lifetime hours. Input ' + inn + ' of 2, output ' + out + ' of 1. Open ritual portal">' +
+      '<span class="orb-disc"><span class="fl" aria-hidden="true">' + m.flag + '</span></span>' +
+      '<span class="orb-code">' + m.code + '</span>' +
+      '<span class="orb-hrs">' + fmtHrs(state.lifetimeHours[k]) + ' hrs</span>' +
+      '<span class="orb-pill"><span>In: ' + inn + '/2 &bull;</span> <span>Out: ' + out + '/1</span></span></button>';
+  }).join('') + '</div></div>';
+  el.altarBody.innerHTML = h;
+}
+
+var portal = {lang:'ja', drag:null, max:240, prev:-1, condPrev:{}, ringPrev:{}, fx:null};
+function openPortal(trigger, lang){
+  lastFocus = trigger || document.activeElement;
+  if(ALT_META[lang]) portal.lang = lang;
+  delete portal.condPrev[portal.lang]; delete portal.ringPrev[portal.lang];     /* a fresh open fills the ring from empty, without a surge */
+  el.portal.hidden = false;
+  renderPortal(false);
+  if(el.portalScroll) el.portalScroll.scrollTop = 0;
+  try{ el.portal.focus(); }catch(e){}
+}
+function closePortal(){
+  portal.drag = null; if(hold){ if(hold.raf) cancelAnimationFrame(hold.raf); if(hold.card && hold.card.classList) hold.card.classList.remove('holding'); hold = null; } el.targetSheet.hidden = true; el.portal.hidden = true;
+  renderAltar();
+  if(lastFocus && lastFocus.focus){ try{ lastFocus.focus(); }catch(e){} }
+}
+/* the bar's full height == today's target, and the recorded time can never exceed it */
+function mercBase(k){ return Math.max(15, targetMin(k)); }
+function mercMax(k){ return mercBase(k); }      /* hard ceiling: never above the daily target */
+function mercPct(min, k){ return Math.min(100, min / mercBase(k) * 100); }
+var RING_R = 62, RING_C = 2 * Math.PI * RING_R, SURGE_MS = 720;
+function ringOffset(f){ return RING_C * (1 - f); }
+function portalHtml(k){
+  var m = ALT_META[k], p = state.dailyProgress[k], tm = targetMin(k), cur = p.inputMinutes, due = dueCountLang(k);
+  var inOk = inputDone(k), vocOk = p.deckDone && due === 0, outOk = p.outputDone, on = isLit(k);
+  var max = mercMax(k); portal.max = max;
+  if(tm > 0 && cur > tm) cur = tm;   /* legacy values above the goal display as exactly the goal */
+  var merc = '<div class="merc' + (inOk ? ' met' : '') + '" id="merc" role="slider" tabindex="0" aria-orientation="vertical" aria-label="Immersion time today" aria-valuemin="0" aria-valuemax="' + max + '" aria-valuenow="' + cur +
+    '" aria-valuetext="' + fmtDur(cur) + ' of ' + fmtDur(tm) + '"><div class="merc-tube"><div class="merc-fill" id="mercFill" style="transform:translateY(' + (100 - mercPct(cur, k)) + '%)"></div></div>' +
+    '<div class="merc-cap"><div class="merc-top"><span class="merc-title">Immersion</span><button type="button" class="merc-reset" data-action="merc-reset" aria-label="Reset immersion time to zero"' + (cur ? '' : ' disabled') + '>' + icon('undo', 15) + '</button></div><span class="merc-read" id="mercRead" aria-live="polite">' + mercReadHtml(cur, k) + '</span>' +
+    '<span class="merc-check" aria-hidden="true">' + icon('check', 18) + '</span></div></div>';
+  var vocab = '<button class="vcard' + (vocOk ? ' done' : '') + '" data-action="portal-review" aria-label="Vocabulary, ' + (vocOk ? 'completed' : due + ' due') + '. Start reviewing"><b>Vocabulary</b>' +
+    '<span class="vbadge">' + (vocOk ? icon('check', 13) + 'Completed' : due + ' due') + '</span></button>';
+  var out = '<button class="out-card" data-action="toggle-output" aria-pressed="' + (outOk ? 'true' : 'false') + '" aria-label="Output. ' + (outOk ? 'Completed, tap to undo' : 'Press and hold to ignite') + '"><span class="out-badge" aria-hidden="true">' + icon('check', 16) + '</span>' +
+    '<span class="out-ring">' + icon('mic', 34) + '</span><span class="out-label">Output</span><span class="out-hint" aria-hidden="true">' + (outOk ? 'Tap to undo' : 'Hold to ignite') + '</span></button>';
+  var inLit = inOk && vocOk;
+  /* what changed since the last render decides whether the energy surges up the conduit (and the ring waits for it) */
+  var done = (inOk ? 1 : 0) + (vocOk ? 1 : 0) + (outOk ? 1 : 0), f = done / 3;
+  var pc = portal.condPrev[k], pf = portal.ringPrev[k];
+  var newL = !!(pc && inLit && !pc.l), newR = !!(pc && outOk && !pc.r), surging = newL || newR;
+  portal.condPrev[k] = {l:inLit, r:outOk}; portal.ringPrev[k] = f;
+  portal.fx = {k:k, f:f, newL:newL, newR:newR, surging:surging, on:on, inLit:inLit, outOk:outOk};
+  var shown = pf === undefined ? 0 : pf;
+  var cond = '<svg class="pconduits" viewBox="0 0 100 46" aria-hidden="true">' +
+    '<path class="cd' + (inLit && !newL ? ' lit' : '') + '" id="pcL" d="M50 0 C50 26 28 20 28 46"/><path class="cd' + (outOk && !newR ? ' lit' : '') + '" id="pcR" d="M50 0 C50 26 78 20 78 46"/>' +
+    '<path class="sg" id="sgL" d="M50 0 C50 26 28 20 28 46"/><path class="sg" id="sgR" d="M50 0 C50 26 78 20 78 46"/></svg>';
+  var ring = '<svg class="p-ring' + (f >= 1 && !surging ? ' full' : '') + '" viewBox="0 0 132 132" aria-hidden="true"><circle class="rt" cx="66" cy="66" r="' + RING_R + '"/>' +
+    '<circle class="rp" id="pRing" cx="66" cy="66" r="' + RING_R + '" stroke-dasharray="' + RING_C.toFixed(2) + '" style="stroke-dashoffset:' + ringOffset(shown).toFixed(2) + 'px;opacity:' + (shown > 0 ? 1 : 0) + '"/></svg>';
+  return '<div class="p-emblem' + (on && !surging ? ' lit' : '') + '" id="pEmblem" role="img" aria-label="' + m.name + ', ' + done + ' of 3 rites complete' + (on ? ', flame ignited' : ', flame not yet lit') + '">' + ring + '<span class="fl" aria-hidden="true">' + m.flag + '</span><span class="p-code" lang="' + (k === 'en' ? 'en' : k) + '">' + m.native + '</span></div>' +
+    cond + '<div class="chambers"><div class="pcol">' + merc + vocab + '</div>' + out + '</div>';
+}
+/* conduits are drawn in real pixels so a travelling pulse keeps its shape and the paths always meet the emblem and both chambers */
+function layoutConduits(){
+  try{
+    var svg = el.portalBody.querySelector('.pconduits'), pcol = el.portalBody.querySelector('.pcol'), oc = el.portalBody.querySelector('.out-card');
+    if(!svg || !pcol || !oc) return;
+    var r = svg.getBoundingClientRect(), a = pcol.getBoundingClientRect(), b = oc.getBoundingClientRect();
+    if(!r.width) return;
+    var W = Math.round(r.width * 10) / 10, xm = W / 2, xl = Math.round((a.left + a.width / 2 - r.left) * 10) / 10, xr = Math.round((b.left + b.width / 2 - r.left) * 10) / 10;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' 46');
+    var dl = 'M' + xm + ' 0 C' + xm + ' 26 ' + xl + ' 20 ' + xl + ' 46', dr = 'M' + xm + ' 0 C' + xm + ' 26 ' + xr + ' 20 ' + xr + ' 46';
+    ['pcL', 'sgL'].forEach(function(id){ var n = svg.querySelector('#' + id); if(n) n.setAttribute('d', dl); });
+    ['pcR', 'sgR'].forEach(function(id){ var n = svg.querySelector('#' + id); if(n) n.setAttribute('d', dr); });
+  }catch(e){}
+}
+/* Settles the visuals for the freshly rendered portal. A task that just finished sends a pulse of light UP its conduit; when it lands the
+   emblem takes the hit, the progress ring fills and (all three done) the flame ignites. Everything else updates immediately. */
+function playPortalFx(ignite){
+  var fx = portal.fx; if(!fx) return;
+  var k = fx.k;
+  function settle(){
+    if(portal.lang !== k || el.portal.hidden) return;
+    var ring = $('#pRing'), em = $('#pEmblem');
+    if(ring){
+      try{ void ring.getBoundingClientRect(); }catch(e){}
+      ring.style.strokeDashoffset = ringOffset(fx.f).toFixed(2) + 'px'; ring.style.opacity = fx.f > 0 ? 1 : 0;
+      if(ring.parentNode && ring.parentNode.classList) ring.parentNode.classList.toggle('full', fx.f >= 1);
+    }
+    var l = $('#pcL'), r = $('#pcR');
+    if(l && l.classList) l.classList.toggle('lit', fx.inLit);
+    if(r && r.classList) r.classList.toggle('lit', fx.outOk);
+    if(em && em.classList && fx.on) em.classList.add('lit');
+  }
+  function hit(){
+    var em = $('#pEmblem'); if(!em || !em.classList) return;
+    em.classList.remove('impact'); try{ void em.offsetWidth; }catch(e){}
+    em.classList.add('impact'); setTimeout(function(){ em.classList.remove('impact'); }, 800);
+    if(ignite){ em.classList.add('ignite'); setTimeout(function(){ em.classList.remove('ignite'); }, 1100); }
+  }
+  var animate = fx.surging && !REDUCED, packets = 0;
+  if(animate){
+    [['pcL', 'sgL', fx.newL], ['pcR', 'sgR', fx.newR]].forEach(function(t){
+      if(!t[2]) return;
+      var base = $('#' + t[0]), sg = $('#' + t[1]);
+      if(!base || !sg || !base.getTotalLength || !sg.animate) return;
+      var len = base.getTotalLength(), seg = Math.max(26, len * .22);
+      sg.style.strokeDasharray = seg.toFixed(1) + ' ' + (len * 2).toFixed(1);
+      sg.style.opacity = 1;
+      var a = sg.animate([{strokeDashoffset:-(len - seg)}, {strokeDashoffset:seg}], {duration:SURGE_MS, easing:'cubic-bezier(.45,0,.25,1)'});
+      a.onfinish = a.oncancel = function(){ sg.style.opacity = 0; };
+      packets++;
+    });
+  }
+  if(!packets){ settle(); if(ignite) hit(); return; }
+  triggerHaptic(8);
+  setTimeout(function(){ settle(); hit(); triggerHaptic(14); }, SURGE_MS - 40);
+}
+function renderPortal(ignite){
+  var k = portal.lang, m = ALT_META[k], focusAct = null;
+  try{ var ae = document.activeElement; if(ae && ae.getAttribute && el.portal.contains && el.portal.contains(ae)) focusAct = ae.getAttribute('data-action') || (ae.id === 'merc' ? 'merc' : null); }catch(e){}
+  $('#portalTitle').textContent = m.name + ' Ritual Portal';
+  el.portalBody.innerHTML = portalHtml(k);
+  layoutConduits();
+  playPortalFx(ignite);
+  if(focusAct){
+    try{
+      var tgt = focusAct === 'merc' ? $('#merc') : $('#portalBody [data-action="' + focusAct + '"]');
+      if(tgt && tgt.focus) tgt.focus();
+    }catch(e){}
+  }
+}
+/* One-way: newMinutes = max(previous, incoming). Only an explicit reset (force) can lower it. */
+function setInputMinutes(k, min, force){
+  var p = state.dailyProgress[k];
+  min = Math.max(0, Math.min(720, Math.round(min / 5) * 5));
+  if(!force){ min = Math.min(mercMax(k), min); min = Math.max(p.inputMinutes, min); }
+  if(min === p.inputMinutes){ renderPortal(false); return; }
+  p.inputMinutes = min; p.inAt = Date.now();
+  afterTracking(false);
+}
+function toggleOutput(k){
+  var p = state.dailyProgress[k];
+  p.outputDone = !p.outputDone; p.outAt = Date.now();
+  triggerHaptic(p.outputDone ? [10, 30, 14] : 8);
+  afterTracking(false);
+}
+/* ---- Hold to Ignite: press and hold ~1.2s to charge the Output ring ---- */
+var HOLD_MS = 1200, hold = null, holdDoneAt = 0;
+function setCharge(card, v){ if(card && card.style) card.style.setProperty('--chg', String(v)); }
+function sparkBurst(card){
+  var ring = card && card.querySelector && card.querySelector('.out-ring'); if(!ring || REDUCED) return;
+  for(var i = 0; i < 18; i++){
+    var sp = document.createElement('i'), ang = (Math.PI * 2 * i / 18) + Math.random() * .3, dist = 46 + Math.random() * 44;
+    sp.className = 'spark';
+    sp.style.setProperty('--dx', Math.round(Math.cos(ang) * dist) + 'px'); sp.style.setProperty('--dy', Math.round(Math.sin(ang) * dist) + 'px');
+    sp.style.animationDelay = Math.round(Math.random() * 60) + 'ms';
+    ring.appendChild(sp);
+    (function(n){ setTimeout(function(){ if(n.parentNode) n.parentNode.removeChild(n); }, 1000); })(sp);
+  }
+}
+function holdFrame(){
+  if(!hold) return;
+  var now = performance.now(), v;
+  if(hold.releasing){
+    v = Math.max(0, hold.v - (now - hold.t0) / 350);
+    setCharge(hold.card, v);
+    if(v <= 0){ hold.card.classList.remove('holding'); hold = null; return; }
+    hold.v = v; hold.t0 = now; hold.raf = requestAnimationFrame(holdFrame); return;
+  }
+  v = Math.min(1, (now - hold.t0) / HOLD_MS);
+  hold.v = v; setCharge(hold.card, v);
+  if(v >= 1){
+    var k = portal.lang; hold = null; holdDoneAt = Date.now();
+    triggerHaptic([14, 40, 22]);
+    var p = state.dailyProgress[k]; p.outputDone = true; p.outAt = Date.now();
+    afterTracking(false);
+    var nc = $('.out-card'); if(nc){ nc.classList.add('holding'); setCharge(nc, 1); sparkBurst(nc); setTimeout(function(){ nc.classList.remove('holding'); }, 900); }
+    return;
+  }
+  hold.raf = requestAnimationFrame(holdFrame);
+}
+function holdStart(card, id){
+  if(state.dailyProgress[portal.lang].outputDone) return;
+  if(hold && hold.raf) cancelAnimationFrame(hold.raf);
+  var v0 = hold ? hold.v : 0;
+  hold = {card:card, id:id, v:v0, t0:performance.now() - v0 * HOLD_MS, releasing:false, raf:0};
+  card.classList.add('holding'); triggerHaptic(4);
+  hold.raf = requestAnimationFrame(holdFrame);
+}
+function holdRelease(id){
+  if(!hold || (id !== undefined && id !== hold.id)) return;
+  hold.releasing = true; hold.t0 = performance.now();
+  if(hold.raf) cancelAnimationFrame(hold.raf);
+  hold.raf = requestAnimationFrame(holdFrame);
+}
+el.portalBody.addEventListener('pointerdown', function(e){
+  var c = e.target.closest && e.target.closest('.out-card'); if(!c || (e.button !== undefined && e.button > 0)) return;
+  try{ c.setPointerCapture(e.pointerId); }catch(err){}
+  holdStart(c, e.pointerId);
+});
+el.portalBody.addEventListener('pointerup', function(e){ holdRelease(e.pointerId); });
+el.portalBody.addEventListener('pointercancel', function(e){ holdRelease(e.pointerId); });
+el.portalBody.addEventListener('contextmenu', function(e){ if(e.target.closest && e.target.closest('.out-card')) e.preventDefault(); });
+el.portalBody.addEventListener('keydown', function(e){
+  var c = e.target.closest && e.target.closest('.out-card'); if(!c || e.repeat) return;
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); if(state.dailyProgress[portal.lang].outputDone) toggleOutput(portal.lang); else holdStart(c, 'kb'); }
+});
+el.portalBody.addEventListener('keyup', function(e){ if(e.key === 'Enter' || e.key === ' ') holdRelease('kb'); });
+/* Opens the study screen on the deck of this language with the most cards due. */
+function reviewLang(k){
+  var best = null, bestN = 0, now = Date.now();
+  state.decks.forEach(function(d){
+    var n = 0;
+    d.cards.forEach(function(c){ if(!c.sample && cardBase(c, d) === k && (!c.dueDate || Date.parse(c.dueDate) <= now)) n++; });
+    if(n > bestN){ best = d; bestN = n; }
+  });
+  if(!best){ toast('Nothing due for ' + ALT_META[k].name + ' right now'); return; }
+  closePortal();
+  if(state.activeDeckId !== best.id) setActive(best.id);
+  sess = null; flipped = false;
+  showTab('study');
+  toast('Reviewing ' + best.name + ' · ' + bestN + ' due');
+}
+/* live preview while the mercury bar is dragged; committed on release */
+function mercPreview(min){
+  var max = portal.max, tm = targetMin(portal.lang);
+  min = Math.max(Math.min(state.dailyProgress[portal.lang].inputMinutes, max), Math.min(max, Math.max(0, min)));
+  var fill = $('#mercFill'), rd = $('#mercRead'), mc = $('#merc');
+  if(fill) fill.style.transform = 'translateY(' + (100 - mercPct(min, portal.lang)) + '%)';
+  if(rd) rd.innerHTML = mercReadHtml(min, portal.lang);
+  if(mc){ mc.classList.toggle('met', min >= tm); mc.classList.add('dragging'); }
+  if(min !== portal.prev){ portal.prev = min; triggerHaptic(4); }
+}
+function mercFromEvent(e, tube){
+  var r = tube.getBoundingClientRect(), ratio = r.height ? 1 - (e.clientY - r.top) / r.height : 0;
+  var clamped = Math.max(0, Math.min(1, ratio));
+  var calc = Math.round(clamped * mercBase(portal.lang) / 5) * 5;
+  return Math.min(mercMax(portal.lang), Math.max(0, calc));
+}
+el.portalBody.addEventListener('pointerdown', function(e){
+  if(e.target.closest && e.target.closest('.merc-reset')) return;
+  var m = e.target.closest && e.target.closest('.merc'); if(!m) return;
+  var tube = m.querySelector('.merc-tube'); if(!tube) return;
+  portal.drag = {tube:tube, id:e.pointerId, m:m}; portal.prev = -1;
+  try{ m.setPointerCapture(e.pointerId); }catch(err){}
+  if(e.cancelable) e.preventDefault();
+  mercPreview(mercFromEvent(e, tube));
+});
+el.portalBody.addEventListener('pointermove', function(e){
+  if(!portal.drag || e.pointerId !== portal.drag.id) return;
+  portal.drag.y = e.clientY;                         /* coalesce: one visual update per frame */
+  if(portal.drag.raf) return;
+  portal.drag.raf = (window.requestAnimationFrame || function(f){ return setTimeout(f, 16); })(function(){
+    var d = portal.drag; if(!d) return; d.raf = 0;
+    mercPreview(mercFromEvent({clientY:d.y}, d.tube));
+  });
+});
+function endMercDrag(e, commit){
+  if(!portal.drag || e.pointerId !== portal.drag.id) return;
+  var d = portal.drag; portal.drag = null;
+  if(d.raf){ try{ (window.cancelAnimationFrame || clearTimeout)(d.raf); }catch(err){} d.raf = 0; }
+  try{ d.m.releasePointerCapture(d.id); }catch(err){}
+  if(commit) setInputMinutes(portal.lang, mercFromEvent(e, d.tube)); else renderPortal(false);
+}
+el.portalBody.addEventListener('pointerup', function(e){ endMercDrag(e, true); });
+el.portalBody.addEventListener('pointercancel', function(e){ endMercDrag(e, false); });
+el.portalBody.addEventListener('keydown', function(e){
+  var m = e.target.closest && e.target.closest('.merc'); if(!m) return;
+  var cur = state.dailyProgress[portal.lang].inputMinutes, d = 0;
+  if(e.key === 'ArrowUp' || e.key === 'ArrowRight') d = 15;
+  else if(e.key === 'PageUp') d = 60;
+  if(!d) return;
+  e.preventDefault(); setInputMinutes(portal.lang, cur + d);
+});
+
+/* ---- horizontal swipe between the three portals (EN <-> JA <-> KO, looping) ---- */
+var SWIPE = {id:null, x0:0, y0:0, mode:'', t:null};
+function portalNeighbor(dir){
+  var i = ALTAR_LANGS.indexOf(portal.lang);
+  return ALTAR_LANGS[(i + dir + ALTAR_LANGS.length) % ALTAR_LANGS.length];
+}
+function swapPortal(dir, fromX){
+  var title = $('#portalTitle'), body = el.portalBody;
+  function commit(){
+    portal.lang = portalNeighbor(dir); portal.drag = null;
+    delete portal.condPrev[portal.lang]; delete portal.ringPrev[portal.lang];
+    renderPortal(false);
+    if(el.portalScroll) el.portalScroll.scrollTop = 0;
+  }
+  if(REDUCED || !body.animate){ commit(); return; }
+  portal.swiping = true;
+  var dist = Math.max(60, Math.min(160, (el.portalScroll && el.portalScroll.clientWidth || 320) * .4));
+  var out = body.animate([{transform:'translateX(' + (fromX || 0) + 'px)', opacity:1}, {transform:'translateX(' + (-dir * dist) + 'px)', opacity:0}], {duration:140, easing:'ease-in', fill:'forwards'});
+  if(title && title.animate) title.animate([{opacity:1}, {opacity:0}], {duration:140, fill:'forwards'});
+  var done = false;
+  function finish(){
+    if(done) return; done = true;
+    body.style.transform = '';
+    commit();
+    var b2 = el.portalBody;
+    try{ b2.getAnimations().forEach(function(a){ a.cancel(); }); if(title) title.getAnimations().forEach(function(a){ a.cancel(); }); }catch(e){}
+    var inn = b2.animate([{transform:'translateX(' + (dir * dist) + 'px)', opacity:0}, {transform:'translateX(0)', opacity:1}], {duration:220, easing:'cubic-bezier(.2,.8,.2,1)'});
+    if(title && title.animate) title.animate([{opacity:0}, {opacity:1}], {duration:220});
+    inn.onfinish = function(){ portal.swiping = false; };
+    inn.oncancel = function(){ portal.swiping = false; };
+    setTimeout(function(){ portal.swiping = false; }, 400);
+    triggerHaptic(6);
+  }
+  out.onfinish = finish;
+  setTimeout(finish, 260);      /* fallback if the animation never reports finished (e.g. hidden tab) */
+}
+function swipeReset(snap){
+  var body = el.portalBody;
+  if(snap && body && body.animate && !REDUCED){ try{ body.animate([{transform:body.style.transform || 'translateX(0)'}, {transform:'translateX(0)'}], {duration:160, easing:'ease-out'}); }catch(e){} }
+  if(body && body.style) body.style.transform = '';
+  SWIPE.id = null; SWIPE.mode = '';
+}
+if(el.portalScroll){
+  el.portalScroll.addEventListener('pointerdown', function(e){
+    if(portal.swiping || !el.targetSheet.hidden) return;
+    var tg = e.target;
+    /* the Immersion slider (and its reset button) own vertical drags: never start a swipe from there */
+    if(tg && tg.closest && tg.closest('.merc')){ SWIPE.id = null; SWIPE.mode = 'slider'; return; }
+    SWIPE.id = e.pointerId; SWIPE.x0 = e.clientX; SWIPE.y0 = e.clientY; SWIPE.mode = '';
+  });
+  el.portalScroll.addEventListener('pointermove', function(e){
+    if(SWIPE.id === null || e.pointerId !== SWIPE.id || portal.drag) return;
+    var dx = e.clientX - SWIPE.x0, dy = e.clientY - SWIPE.y0;
+    if(!SWIPE.mode){
+      if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      SWIPE.mode = (Math.abs(dx) > Math.abs(dy) * 1.5) ? 'h' : 'v';     /* lock the gesture axis once */
+      if(SWIPE.mode === 'h' && typeof holdRelease === 'function') holdRelease();   /* a swipe that began on Output cancels its charge */
+    }
+    if(SWIPE.mode === 'h' && el.portalBody.style) el.portalBody.style.transform = 'translateX(' + Math.round(dx * .55) + 'px)';
+  });
+  var endSwipe = function(e){
+    if(SWIPE.id === null || e.pointerId !== SWIPE.id){ if(SWIPE.mode === 'slider') SWIPE.mode = ''; return; }
+    var dx = e.clientX - SWIPE.x0, dy = e.clientY - SWIPE.y0, mode = SWIPE.mode;
+    var go = e.type === 'pointerup' && mode === 'h' && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.5 && !portal.drag;
+    var fromX = Math.round(dx * .55);
+    SWIPE.id = null; SWIPE.mode = '';
+    if(mode === 'h') holdDoneAt = Date.now();      /* the click that follows a swipe must not toggle Output */
+    if(go) swapPortal(dx < 0 ? 1 : -1, fromX);
+    else swipeReset(mode === 'h');
+  };
+  el.portalScroll.addEventListener('pointerup', endSwipe);
+  el.portalScroll.addEventListener('pointercancel', endSwipe);
+}
+
+/* daily target sheet */
+var tgt = {lang:'ja', min:120};
+function renderTargetSheet(){
+  el.targetVal.textContent = fmtHrs(tgt.min / 60);
+  el.targetSub.textContent = ALT_META[tgt.lang].flag + ' ' + ALT_META[tgt.lang].name;
+  el.targetChips.innerHTML = [0.5, 1, 1.5, 2, 3, 4].map(function(h){
+    return '<button type="button" class="' + (tgt.min === h * 60 ? 'is-on' : '') + '" data-action="target-set" data-h="' + h + '">' + h + 'h</button>';
+  }).join('');
+}
+function openTarget(trigger){
+  lastFocus = trigger || document.activeElement;
+  tgt = {lang:portal.lang, min:targetMin(portal.lang)};
+  renderTargetSheet(); showSheet(el.targetSheet);
+}
+function closeTargetSheet(){
+  el.targetSheet.hidden = true;
+  if(!el.portal.hidden){ try{ $('#portalTargetBtn').focus(); }catch(e){} }
+}
+function saveTarget(){
+  var k = tgt.lang;
+  state.dailyTargets[k] = {hours:tgt.min / 60, at:Date.now()};
+  el.targetSheet.hidden = true;
+  toast(ALT_META[k].name + ' target: ' + fmtHrs(tgt.min / 60) + ' hrs a day');
+  afterTracking(false);
+  if(!el.portal.hidden){ try{ $('#portalTargetBtn').focus(); }catch(e){} }
+}
+el.targetSheet.addEventListener('click', function(e){ if(e.target === el.targetSheet) closeTargetSheet(); });
 function renderAll(){
+  settleDay();
   renderStreak();
+  renderAltar();
+  if(!el.portal.hidden) renderPortal(false);
+  renderExpedition();
   renderCloud();
   renderStudy(); renderManage(); renderTargetSelect();
 }
@@ -2284,10 +3685,13 @@ document.addEventListener('click', function(e){
   var drow = t.closest('[data-deck]'), did = drow ? drow.getAttribute('data-deck') : null;
   switch(a){
     case 'speak-word':
-      if(cur()) speak(cur().word, 0.85, t, langFor(cur(), cur().word, deck()));
-      break;
     case 'speak-sent':
-      if(cur()){ var st = cur().sentences[+t.getAttribute('data-i')]; speak(st, 0.95, t, langFor(cur(), st, deck())); }
+      if(!cur()) break;
+      if(t._lp){ t._lp = false; break; }                        /* the long-press already spoke slowly */
+      var isW = a === 'speak-word', stx = isW ? cur().word : cur().sentences[+t.getAttribute('data-i')];
+      var nowT = Date.now(), dbl = t._tap && nowT - t._tap < 350;
+      t._tap = dbl ? 0 : nowT;                                  /* single tap: normal speed right away; second tap within 350ms: slow */
+      speak(stx, dbl ? RATE_SLOW : (isW ? RATE_NORMAL : 0.95), t, langFor(cur(), stx, deck()));
       break;
     case 'copy-sent':
       if(cur()) copySentence(cur().sentences[+t.getAttribute('data-i')], t);
@@ -2299,6 +3703,10 @@ document.addEventListener('click', function(e){
       break;
     case 'again': grade(false); break;
     case 'good': grade(true); break;
+    case 'continue-deck': {
+      var cd = nextDueDeck(deck().id);
+      if(cd){ setActive(cd.id); manualPick = null; sess = null; flipped = false; renderAll(); renderStudy(); toast('Studying ' + cd.name); }
+      break; }
     case 'review-all': startSession(true); flipped = false; renderStudy(); break;
     case 'flip': if(cards().length) setFlip(!flipped); break;
     case 'shuffle': shuffle(); break;
@@ -2318,7 +3726,7 @@ document.addEventListener('click', function(e){
       var w = el.fWord.value.trim() || 'word';
       var rl = el.fLang.value || (deckById(editDeckId) || {}).lang || detectLang(w);
       var s = templateSentences(w, el.fPos.value || guessPos(w), regenSalt, rl);
-      el.fS1.value = s[0].text; el.fT1.value = s[0].en; el.fS2.value = s[1].text; el.fT2.value = s[1].en;
+      el.fS1.value = s[0].text; el.fT1.value = s[0].en; el.fS2.value = s[1].text; el.fT2.value = s[1].en; el.fTz1.value = ''; el.fTz2.value = '';
       break;
     case 'cloud-sync': forceSync(); break;
     case 'cloud-save-config': saveConfig(); break;
@@ -2327,6 +3735,27 @@ document.addEventListener('click', function(e){
     case 'cloud-signin': signInEmail(); break;
     case 'cloud-signout': signOutUser(); break;
     case 'open-streak': openStreak(t); break;
+    case 'open-portal': openPortal(t, t.getAttribute('data-lang')); break;
+    case 'portal-back': closePortal(); break;
+    case 'portal-target': openTarget(t); break;
+    case 'portal-review': reviewLang(portal.lang); break;
+    case 'toggle-output':
+      /* real pointer taps: only the completed state can be undone (charging is by hold); detail 0 = scripted/assistive activation */
+      if(Date.now() - holdDoneAt < 800) break;
+      if((e.detail || 0) === 0 || state.dailyProgress[portal.lang].outputDone) toggleOutput(portal.lang);
+      else toast('Press and hold to ignite');
+      break;
+    case 'merc-reset': setInputMinutes(portal.lang, 0, true); triggerHaptic(8); break;
+    case 'inmin': setInputMinutes(portal.lang, state.dailyProgress[portal.lang].inputMinutes + Number(t.getAttribute('data-d'))); break;
+    case 'target-close': closeTargetSheet(); break;
+    case 'target-minus': tgt.min = Math.max(0, tgt.min - 15); renderTargetSheet(); break;
+    case 'target-plus': tgt.min = Math.min(720, tgt.min + 15); renderTargetSheet(); break;
+    case 'target-set': tgt.min = Math.round(Number(t.getAttribute('data-h')) * 60); renderTargetSheet(); break;
+    case 'target-save': saveTarget(); break;
+    case 'open-map': openMap(t, t.getAttribute('data-lang')); break;
+    case 'map-lang': setMapLang(t.getAttribute('data-lang')); break;
+    case 'map-node': selectNode(Number(t.getAttribute('data-lv'))); break;
+    case 'map-inspect-close': selectNode(mapView.sel); break;
     case 'cal-prev': shiftMonth(-1); break;
     case 'cal-next': shiftMonth(1); break;
     case 'open-picker': openPicker(); break;
@@ -2337,6 +3766,7 @@ document.addEventListener('click', function(e){
       if(did){ setActive(did); renderAll(); toast('Active deck: ' + deckById(did).name); }
       break;
     case 'study-deck': showTab('study'); break;
+    case 'deck-portal': showTab('altar'); openPortal(t, t.getAttribute('data-lang')); break;
     case 'open-deck': if(did){ manageDeckId = did; disarm(); renderManage(); } break;
     case 'back-decks': manageDeckId = null; disarm(); renderManage(); break;
     case 'delete-deck':
@@ -2349,6 +3779,24 @@ document.addEventListener('click', function(e){
 document.addEventListener('click', function(e){
   if(e.target.closest && e.target.closest('button, .tab, summary, label.check')) triggerHaptic(10);
 }, true);
+/* long-press a speaker button -> slow, deliberate study speed */
+(function(){
+  var lpTimer = null;
+  function clear(){ if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; } }
+  document.addEventListener('pointerdown', function(e){
+    var b = e.target.closest && e.target.closest('.speak[data-action="speak-word"],.speak[data-action="speak-sent"]');
+    clear(); if(!b || e.button > 0) return;
+    lpTimer = setTimeout(function(){
+      lpTimer = null; if(!cur()) return;
+      var w = b.getAttribute('data-action') === 'speak-word', stx = w ? cur().word : cur().sentences[+b.getAttribute('data-i')];
+      b._lp = true; b._tap = 0; triggerHaptic(10);
+      speak(stx, RATE_SLOW, b, langFor(cur(), stx, deck()));
+      setTimeout(function(){ b._lp = false; }, 700);          /* safety: never leave the flag set if no click follows */
+    }, 480);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave', 'scroll'].forEach(function(n){ document.addEventListener(n, clear, true); });
+  document.addEventListener('contextmenu', function(e){ if(e.target.closest && e.target.closest('.speak')) e.preventDefault(); });
+})();
 el.processBtn.addEventListener('click', processWords);
 el.newBtn.addEventListener('click', function(){ if(manageDeckId) openEditor(manageDeckId, null); });
 el.clearBtn.addEventListener('click', function(){
@@ -2368,8 +3816,16 @@ el.copyBtn.addEventListener('click', function(){
     } else fallback();
   }catch(err){ fallback(); }
 });
+el.mapTrack.addEventListener('click', function(e){
+  if(mapView.sel >= 0 && !(e.target.closest && e.target.closest('.mnode'))) selectNode(mapView.sel);
+});
+var mapResizeT = null;
+window.addEventListener('resize', function(){ if(el.mapSheet.hidden) return; clearTimeout(mapResizeT); mapResizeT = setTimeout(function(){ renderMap(false); }, 120); });
 document.addEventListener('keydown', function(e){
-  if(anySheetOpen()){ if(e.key === 'Escape') closeAnySheet(); return; }
+  if(anySheetOpen()){
+    if(e.key === 'Escape'){ if(!el.targetSheet.hidden) closeTargetSheet(); else if(!el.portal.hidden) closePortal(); else closeAnySheet(); }
+    return;
+  }
   var tag = (e.target.tagName || '').toLowerCase();
   if(tag === 'input' || tag === 'textarea' || tag === 'select') return;
   if(tab === 'study'){
@@ -2388,10 +3844,12 @@ window.addEventListener('online', function(){
   else startCloud();
 });
 window.addEventListener('offline', function(){ if(cloud.cfg) setCloud('offline', 'You are offline. Changes are saved on this device and will sync when you are back online.'); });
-if(typeof setInterval === 'function') setInterval(renderStreak, 60000);
+if(typeof setInterval === 'function') setInterval(tickDay, 60000);
+document.addEventListener('visibilitychange', tickDay);
 save();
+autoAdvanceDeck();
 renderAll();
-showTab('study');
+showTab('altar');
 /* The UI above is already live from localStorage. Cloud connects once the deferred SDK scripts have run (window load). */
 if(typeof document.readyState === 'string' && document.readyState === 'complete') startCloud(); else window.addEventListener('load', startCloud);
 })();
