@@ -646,6 +646,20 @@ select{
 .chips button.is-on{border-color:rgba(226,217,200,.6);color:var(--ti);background:rgba(226,217,200,.1)}
 .tgt-copy{font-size:13.5px;line-height:1.5;color:var(--muted)}
 #targetSheet{z-index:58}
+#voiceSheet{z-index:57}
+.vd{display:flex;flex-direction:column;gap:14px;font-size:14px;line-height:1.5;color:var(--body)}
+.vd h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 6px}
+.vd-card{padding:12px 14px;border-radius:14px;background:var(--etch);border:1px solid var(--etch-line)}
+.vd-card b{color:var(--ink)}
+.vd-card p{margin:4px 0 0}
+.vd-list{max-height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:12px;background:rgba(0,0,0,.32);padding:8px 10px;font-family:var(--font-mono);font-size:11.5px;line-height:1.65;color:var(--body);word-break:break-word}
+.vd-warn{color:#fbbf24}.vd-ok{color:#6ee7b7}.vd-dim{color:var(--muted)}
+.vd-note{font-size:12.5px;color:var(--muted)}
+.vd-src{margin-top:14px;margin-bottom:8px}
+.vd-src pre{max-height:260px;overflow:auto}
+.vd-row{display:flex;gap:8px;flex-wrap:wrap}
+.vd-row .btn{flex:1 1 30%}
+.vd input,.vd select{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--etch-line);background:rgba(0,0,0,.35);color:var(--ink);padding:0 12px;font-size:16px;font-family:inherit}
 @media (prefers-reduced-motion:reduce){
   .card{transition:none}
   .gf-flame,.ember,.cond.lit,.grand.lit .gf-halo,.p-emblem.ignite,.p-emblem.ignite::after{animation:none}
@@ -839,6 +853,12 @@ service cloud.firestore {
             </div>
           </details>
         </section>
+
+        <section class="cloud" id="voiceCard" aria-label="Speech settings">
+          <div class="cloud-head"><h3>Speech</h3></div>
+          <p class="cloud-note">See which voices this browser exposes and which one the app picks for Japanese, Korean and English.</p>
+          <button class="btn" data-action="voice-diag"><span data-icon="speaker"></span>Voice Diagnostics</button>
+        </section>
       </div>
       <div class="stack" id="manageCards" hidden>
         <div class="detail-head">
@@ -985,6 +1005,82 @@ service cloud.firestore {
       <button class="icon-btn" id="portalTargetBtn" data-action="portal-target" aria-label="Set daily immersion target" aria-haspopup="dialog"><span data-icon="target"></span></button>
     </div>
     <div class="portal-scroll" id="portalScroll"><div id="portalBody"></div></div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="voiceSheet" hidden>
+  <div class="sheet frost" role="dialog" aria-modal="true" aria-labelledby="voiceTitle" tabindex="-1">
+    <div class="sheet-head">
+      <div><h2 id="voiceTitle">Voice Diagnostics</h2><p class="sheet-sub">What this browser actually exposes</p></div>
+      <button class="icon-btn" data-action="voice-close" aria-label="Close"><span data-icon="x"></span></button>
+    </div>
+    <div class="vd" id="voiceBody"></div>
+    <details class="formats vd-src" id="ttsSrc">
+      <summary>Cloud voice server code (tts-worker.js)</summary>
+      <p class="vd-note">Optional. Deploy this yourself as a serverless function (for example a Cloudflare Worker) and paste its URL above. It is not running anywhere yet, and the API key goes in the server's secrets, never in this page.</p>
+      <button class="btn small" data-action="tts-copy-worker"><span data-icon="copy"></span>Copy server code</button>
+      <pre id="ttsSrcCode">/**
+ * OPTIONAL cloud text-to-speech proxy for the flashcard app (Cloudflare Worker, module syntax).
+ * NOT DEPLOYED and NOT TESTED against the live Google API: you must deploy it yourself.
+ *
+ * What it does: accepts POST {text, lang, rate} from your GitHub Pages site, calls Google Cloud
+ * Text-to-Speech with a key that lives only in a Worker secret, and returns audio/mpeg.
+ * The app caches the audio on the phone, so repeated words do not hit the endpoint again.
+ *
+ * Setup you still have to do (nothing here is configured for you):
+ *   1. Create a Google Cloud project, enable the Cloud Text-to-Speech API, enable billing,
+ *      and create an API key restricted to that one API. Check Google's current pricing and free tier yourself.
+ *   2. Install Wrangler, then:  wrangler secret put GOOGLE_TTS_API_KEY      (paste the key when prompted)
+ *   3. Set ALLOWED_ORIGIN below to your site origin and run:  wrangler deploy
+ *   4. In the app: Decks &gt; Speech &gt; Voice Diagnostics &gt; Cloud voice: paste the Worker URL, choose a mode, tap "Test cloud voice".
+ *
+ * Any other serverless host (Cloud Run, Vercel, Netlify Functions, Azure Functions) works too if it keeps the
+ * same contract: POST JSON {text, lang, rate} -&gt; 200 with an audio/* body, CORS allowing your site origin.
+ * To use Azure Speech instead, swap the fetch below for Azure's REST call and keep the secret server side.
+ */
+const ALLOWED_ORIGIN = 'https://seanlee7630.github.io';   // origin only, no path
+const MAX_CHARS = 300;
+// Voice names are Google Cloud "Neural2" voices; verify they exist in your project's voice list and change freely.
+const VOICES = {
+  ja: {languageCode: 'ja-JP', name: 'ja-JP-Neural2-B'},
+  ko: {languageCode: 'ko-KR', name: 'ko-KR-Neural2-A'},
+  en: {languageCode: 'en-US', name: 'en-US-Neural2-D'}
+};
+
+export default {
+  async fetch(request, env) {
+    const cors = {
+      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Vary': 'Origin'
+    };
+    if (request.method === 'OPTIONS') return new Response(null, {status: 204, headers: cors});
+    if (request.method !== 'POST') return new Response('POST only', {status: 405, headers: cors});
+    if (request.headers.get('Origin') !== ALLOWED_ORIGIN) return new Response('forbidden', {status: 403, headers: cors});
+    if (!env.GOOGLE_TTS_API_KEY) return new Response('server not configured', {status: 500, headers: cors});
+
+    let body;
+    try { body = await request.json(); } catch { return new Response('bad json', {status: 400, headers: cors}); }
+    const text = String(body.text || '').trim();
+    const voice = VOICES[String(body.lang || '').slice(0, 2).toLowerCase()];
+    if (!text || text.length &gt; MAX_CHARS || !voice) return new Response('bad request', {status: 400, headers: cors});
+    const rate = Math.min(1.5, Math.max(0.5, Number(body.rate) || 0.9));
+
+    const g = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(env.GOOGLE_TTS_API_KEY), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({input: {text}, voice, audioConfig: {audioEncoding: 'MP3', speakingRate: rate}})
+    });
+    if (!g.ok) return new Response('upstream error ' + g.status, {status: 502, headers: cors});
+    const {audioContent} = await g.json();
+    if (!audioContent) return new Response('empty audio', {status: 502, headers: cors});
+    const bin = Uint8Array.from(atob(audioContent), c =&gt; c.charCodeAt(0));
+    return new Response(bin, {headers: {...cors, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=31536000'}});
+  }
+};
+</pre>
+    </details>
   </div>
 </div>
 
@@ -1467,7 +1563,7 @@ var el = {
   progress:$('#progress'), drag:$('#drag'), glow:$('#glow'), badgeGood:$('#badgeGood'), badgeAgain:$('#badgeAgain'),
   goodBtn:$('#goodBtn'), studyDone:$('#studyDone'), doneTitle:$('#doneTitle'), doneText:$('#doneText'), doneStats:$('#doneStats'),
   mapSheet:$('#mapSheet'), mapScroll:$('#mapScroll'), mapTrack:$('#mapTrack'), mapStats:$('#mapStats'), inspect:$('#inspect'),
-  altarBody:$('#altarBody'), portal:$('#portal'), portalBody:$('#portalBody'), portalScroll:$('#portalScroll'), targetSheet:$('#targetSheet'),
+  altarBody:$('#altarBody'), portal:$('#portal'), portalBody:$('#portalBody'), portalScroll:$('#portalScroll'), targetSheet:$('#targetSheet'), voiceSheet:$('#voiceSheet'), voiceBody:$('#voiceBody'),
   targetVal:$('#targetVal'), targetSub:$('#targetSub'), targetChips:$('#targetChips'),
   toast:$('#toast')
 };
@@ -1539,42 +1635,56 @@ function copySentence(text, btn){
 
 /* ---------- speech: voice chosen per language ---------- */
 var synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
-var VOICE_PREF = {
-  ja:/O-Ren|Kyoko|Hattori|Otoya|Nanami|Haruka/i,
-  ko:/Yuna|Sora|Heami|SunHi/i,
-  en:/Evan|Samantha|Google US|Aaron|Allison|Ava|Nicky|Joelle|Jenny/i
+/* Preferred voice names, best first. Order matters: earlier = preferred. */
+var VOICE_ORDER = {
+  ja:['O-Ren','Kyoko','Otoya','Hattori','Nanami','Haruka'],
+  ko:['Yuna','Sora','Heami','SunHi'],
+  en:['Evan','Samantha','Ava','Allison','Aaron','Google US','Nicky','Joelle','Jenny']
 };
+var HQ_RE = /Enhanced|Premium/i;     /* the Web Speech API exposes no quality flag: the NAME is the only hint */
+var TIER_TXT = ['preferred voice, Enhanced/Premium in its name', 'Enhanced/Premium in its name (not on your preferred list)', 'preferred voice name (no Enhanced/Premium in the name)', 'best on-device voice, not one of your preferred names', 'language match only (not an on-device voice)'];
 var warnedLang = {};
-/* Voices load asynchronously on most browsers (and iOS Safari), so cache them as soon as they appear. */
-var voiceCache = [], voicePick = {};
+var voiceCache = [];
+/* Voices load asynchronously (iOS Safari, Chrome): re-query on every call and keep the last non-empty list as a fallback. */
 function refreshVoices(){
-  if(!synth) return;
-  try{ var vs = synth.getVoices() || []; if(vs.length){ voiceCache = vs.slice(); voicePick = {}; } }catch(e){}
+  if(!synth) return voiceCache;
+  try{ var vs = synth.getVoices() || []; if(vs.length) voiceCache = Array.prototype.slice.call(vs); }catch(e){}
+  return voiceCache;
 }
-function voiceFor(lang){
-  if(!synth) return null;
-  if(!voiceCache.length) refreshVoices();
-  var vs = voiceCache, want = lang.toLowerCase().replace('_', '-'), base = want.slice(0, 2);
+function prefRank(base, name){
+  var o = VOICE_ORDER[base] || [], n = String(name || '').toLowerCase();
+  for(var i = 0; i < o.length; i++){ if(n.indexOf(o[i].toLowerCase()) >= 0) return i; }
+  return -1;
+}
+/* Language is never swapped: only voices for the requested language are candidates. */
+function pickVoice(lang){
+  var res = {voice:null, tier:5, pool:[]};
+  if(!synth) return res;
+  var vs = refreshVoices(), want = lang.toLowerCase().replace('_', '-'), base = want.slice(0, 2);
   function vl(v){ return (v.lang || '').toLowerCase().replace('_', '-'); }
   var exact = vs.filter(function(v){ return vl(v) === want; });
   var pool = exact.length ? exact : vs.filter(function(v){ return vl(v).indexOf(base) === 0; });
-  if(!pool.length) return null;
-  var pref = VOICE_PREF[base];
-  /* order: preferred name in Enhanced/Premium quality, any Enhanced/Premium voice, preferred name, on-device voice, first match */
-  var HQ = /Enhanced|Premium/i;
-  function hq(v){ return HQ.test(v.name); }
-  var named = pref ? pool.filter(function(v){ return pref.test(v.name); }) : [];
-  return named.filter(hq)[0] || pool.filter(hq)[0] || named[0]
-      || pool.filter(function(v){ return v.localService; })[0] || pool[0];
+  res.pool = pool; if(!pool.length) return res;
+  var best = null, bt = 9, br = 99;
+  pool.forEach(function(v){
+    var r = prefRank(base, v.name), h = HQ_RE.test(v.name || '');
+    var t = (r >= 0 && h) ? 0 : h ? 1 : r >= 0 ? 2 : v.localService ? 3 : 4;
+    if(r < 0) r = 98;
+    if(t < bt || (t === bt && r < br)){ best = v; bt = t; br = r; }
+  });
+  res.voice = best; res.tier = bt; return res;
 }
+function voiceFor(lang){ return pickVoice(lang).voice; }
 if(synth){
   refreshVoices();
-  try{ synth.onvoiceschanged = refreshVoices; }catch(e){}
+  try{ synth.onvoiceschanged = function(){ refreshVoices(); try{ if(typeof voiceDiagRefresh === 'function') voiceDiagRefresh(); }catch(e){} }; }catch(e){}
   /* iOS Safari keeps speech locked until a user gesture touches the synth: cancel() on the first touch unlocks it cleanly. */
   var unlockSpeech = function(){
-    document.removeEventListener('touchstart', unlockSpeech, true);
-    document.removeEventListener('pointerdown', unlockSpeech, true);
-    document.removeEventListener('click', unlockSpeech, true);
+    try{
+      document.removeEventListener('touchstart', unlockSpeech, true);
+      document.removeEventListener('pointerdown', unlockSpeech, true);
+      document.removeEventListener('click', unlockSpeech, true);
+    }catch(e){}
     try{ synth.cancel(); }catch(e){}
     refreshVoices();
   };
@@ -1582,31 +1692,113 @@ if(synth){
   document.addEventListener('pointerdown', unlockSpeech, true);
   document.addEventListener('click', unlockSpeech, true);
 }
-var speakToken = 0;
-var RATE_NORMAL = 0.88, RATE_SLOW = 0.7;
-function speak(text, rate, btn, lang){
+var speakToken = 0, lastSpeak = null, speechErrors = [];
+var RATE_NORMAL = 0.9, RATE_SLOW = 0.7;
+function logSpeechError(src, msg){
+  speechErrors.push(new Date().toISOString().slice(11, 19) + ' [' + src + '] ' + msg);
+  if(speechErrors.length > 30) speechErrors.shift();
+}
+
+/* ---------- optional cloud voice (off by default; needs your own serverless endpoint, see tts-worker.js) ---------- */
+var TTS_KEY = 'wordstack.tts', ttsCfg = {mode:'off', endpoint:''};
+try{ var rawTts = JSON.parse(localStorage.getItem(TTS_KEY) || 'null'); if(rawTts && typeof rawTts === 'object'){ ttsCfg.mode = /^(off|fallback|always)$/.test(rawTts.mode) ? rawTts.mode : 'off'; ttsCfg.endpoint = String(rawTts.endpoint || ''); } }catch(e){}
+function saveTtsCfg(){ try{ localStorage.setItem(TTS_KEY, JSON.stringify(ttsCfg)); }catch(e){} }
+function cloudReady(){ return ttsCfg.mode !== 'off' && /^https:\/\/\S+$/.test(ttsCfg.endpoint) && typeof Audio !== 'undefined'; }
+var SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+var ttsAudio = null, ttsMem = {}, ttsMemKeys = [], TTS_CACHE = 'wordstack-tts-v1';
+function hashKey(s){ var h = 5381, i; for(i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + '-' + s.length; }
+function stopCloudAudio(){ try{ if(ttsAudio){ ttsAudio.onended = ttsAudio.onerror = null; ttsAudio.pause(); } }catch(e){} }
+function stopSpeech(){ if(synth && (synth.speaking || synth.pending)) { try{ synth.cancel(); }catch(e){} } stopCloudAudio(); }
+/* iOS only lets an audio element play after it was started inside a tap: prime it silently now, load the real clip later. */
+function primeAudio(){
+  try{
+    if(!ttsAudio){ ttsAudio = new Audio(); ttsAudio.preload = 'auto'; ttsAudio.setAttribute('playsinline', ''); }
+    ttsAudio.src = SILENT_WAV; var p = ttsAudio.play(); if(p && p.catch) p.catch(function(){});
+  }catch(e){}
+}
+function cacheReq(key){ return (window.caches && /^https?:/.test(location.protocol)) ? new Request(location.origin + '/__wordstack_tts__/' + hashKey(key)) : null; }
+function cacheGet(key){
+  var rq = cacheReq(key); if(!rq) return Promise.resolve(null);
+  return caches.open(TTS_CACHE).then(function(c){ return c.match(rq); }).then(function(r){ return r ? r.blob() : null; }).catch(function(){ return null; });
+}
+function cachePut(key, blob){
+  var rq = cacheReq(key); if(!rq) return;
+  caches.open(TTS_CACHE).then(function(c){
+    return c.put(rq, new Response(blob, {headers:{'Content-Type':blob.type || 'audio/mpeg'}})).then(function(){ return c.keys(); }).then(function(ks){ if(ks.length > 200) return c.delete(ks[0]); });
+  }).catch(function(){});
+}
+function fetchCloud(text, lang, rate){
+  var ctl = ('AbortController' in window) ? new AbortController() : null, to = setTimeout(function(){ if(ctl) ctl.abort(); }, 8000);
+  return fetch(ttsCfg.endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:text, lang:lang, rate:rate}), signal:ctl ? ctl.signal : undefined})
+    .then(function(r){ clearTimeout(to); if(!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+    .then(function(b){ if(!b || !b.size || (b.type && b.type.indexOf('audio') !== 0)) throw new Error('response was not audio'); return b; })
+    .catch(function(e){ clearTimeout(to); throw e; });
+}
+function cloudSpeak(text, lang, rate, btn, tok, fallback){
+  var key = lang + '|' + rate + '|' + text;
+  primeAudio();
+  function fail(why){
+    logSpeechError('cloud', why);
+    if(tok !== speakToken) return;
+    if(btn) btn.classList.remove('speaking');
+    if(fallback){ toast('Cloud voice unavailable. Using the device voice.'); fallback(); } else toast('Cloud voice failed: ' + why);
+  }
+  function play(url){
+    if(tok !== speakToken) return;
+    var a = ttsAudio;
+    a.onended = function(){ if(tok === speakToken && btn) btn.classList.remove('speaking'); };
+    a.onerror = function(){ fail('audio playback error'); };
+    a.src = url;
+    var p = a.play(); if(p && p.catch) p.catch(function(e){ fail('play() blocked: ' + (e && e.name || e)); });
+  }
+  function remember(blob){
+    var url = URL.createObjectURL(blob); ttsMem[key] = url; ttsMemKeys.push(key);
+    if(ttsMemKeys.length > 40){ var old = ttsMemKeys.shift(); try{ URL.revokeObjectURL(ttsMem[old]); }catch(e){} delete ttsMem[old]; }
+    return url;
+  }
+  if(ttsMem[key]){ play(ttsMem[key]); return; }
+  cacheGet(key).then(function(blob){
+    if(blob) return blob;
+    return fetchCloud(text, lang, rate).then(function(b){ cachePut(key, b); return b; });
+  }).then(function(blob){ play(remember(blob)); }).catch(function(e){ fail(String(e && e.message || e)); });
+}
+
+function speakLocal(text, rate, btn, lang, tok){
+  try{
+    try{ synth.cancel(); }catch(e){}                   /* clears stalled playback; iOS can wedge otherwise */
+    if(synth.paused){ try{ synth.resume(); }catch(e){} }
+    var u = new SpeechSynthesisUtterance(text);
+    var pk = pickVoice(lang), v = pk.voice;
+    u.lang = lang;
+    if(v) u.voice = v;                                 /* assign the real SpeechSynthesisVoice, not just the language */
+    else if(!warnedLang[lang.slice(0, 2)]){
+      warnedLang[lang.slice(0, 2)] = 1;
+      toast((pk.pool.length || refreshVoices().length) ? 'No ' + langName(lang) + ' voice found. Add one in your device speech settings.' : 'No voices exposed yet. Open Voice Diagnostics.');
+    }
+    u.rate = rate; u.pitch = 1; u.volume = 1;
+    lastSpeak = {lang:lang, requested:v ? v.name : '(none exposed for this language)', actual:u.voice ? u.voice.name : '(no voice assigned; engine default for ' + lang + ')', tier:v ? pk.tier : 5, rate:rate, at:Date.now()};
+    var done = function(){ if(tok === speakToken && btn) btn.classList.remove('speaking'); };
+    u.onstart = function(){ if(tok === speakToken && btn) btn.classList.add('speaking'); };
+    u.onend = done;
+    u.onerror = function(ev){ var er = ev && ev.error; if(er !== 'interrupted' && er !== 'canceled') logSpeechError('speech', String(er || 'unknown error') + ' (' + lang + ', ' + (v ? v.name : 'no voice') + ')'); done(); };
+    synth.speak(u);
+  }catch(e){ logSpeechError('speech', String(e && e.message || e)); toast('Could not play audio'); }
+}
+function speak(text, rate, btn, lang, opts){
   if(!synth || !window.SpeechSynthesisUtterance){ toast('Speech is not supported in this browser'); return; }
   if(!text){ return; }
   lang = lang || detectLang(text);
-  try{
-    if(synth.speaking || synth.pending) synth.cancel();
-    $$('.speaking').forEach(function(b){ b.classList.remove('speaking'); });
-    var u = new SpeechSynthesisUtterance(text);
-    var v = voiceFor(lang);
-    u.lang = lang;
-    if(v) u.voice = v;
-    else if((synth.getVoices() || []).length && !warnedLang[lang.slice(0, 2)]){
-      warnedLang[lang.slice(0, 2)] = 1;
-      toast('No ' + langName(lang) + ' voice found. Add one in your device speech settings.');
-    }
-    u.rate = rate; u.pitch = 1; u.volume = 1;
-    var tok = ++speakToken;
-    if(btn) btn.classList.add('speaking');                 /* instant feedback, even if the device is muted */
-    var done = function(){ if(tok === speakToken && btn) btn.classList.remove('speaking'); };   /* a cancelled older utterance must not clear the newer glow */
-    u.onstart = function(){ if(tok === speakToken && btn) btn.classList.add('speaking'); };
-    u.onend = done; u.onerror = done;
-    synth.speak(u);
-  }catch(e){ toast('Could not play audio'); }
+  var tok = ++speakToken;
+  stopCloudAudio();
+  $$('.speaking').forEach(function(b){ b.classList.remove('speaking'); });
+  if(btn) btn.classList.add('speaking');               /* instant feedback, even if the device is muted */
+  var useCloud = !(opts && opts.local) && cloudReady() && (ttsCfg.mode === 'always' || pickVoice(lang).tier >= 3);
+  if(useCloud){
+    try{ synth.cancel(); }catch(e){}
+    cloudSpeak(text, lang, rate, btn, tok, function(){ speakLocal(text, rate, btn, lang, tok); });
+    return;
+  }
+  speakLocal(text, rate, btn, lang, tok);
 }
 
 /* ---------- highlight the target word in a sentence ---------- */
@@ -2347,7 +2539,7 @@ function grade(familiar){
   if(grading || !sess || !sess.queue.length) return;
   var c = cardById(d, sess.queue[0]); if(!c) return;
   grading = true;
-  if(synth && (synth.speaking || synth.pending)) synth.cancel();
+  stopSpeech();
   triggerHaptic(15);
   if(familiar && sess.queue.length > 1) confetti(el.goodBtn);
   var dir = familiar ? 1 : -1, far = (window.innerWidth || 420) * 1.15;
@@ -2455,15 +2647,15 @@ function showSheet(node){
   var panel = node.firstElementChild;
   if(panel){ panel.scrollTop = 0; panel.focus(); }
 }
-function anySheetOpen(){ return !el.sheet.hidden || !el.nameSheet.hidden || !el.pickSheet.hidden || !el.streakSheet.hidden || !el.mapSheet.hidden || !el.portal.hidden || !el.targetSheet.hidden; }
+function anySheetOpen(){ return !el.sheet.hidden || !el.nameSheet.hidden || !el.pickSheet.hidden || !el.streakSheet.hidden || !el.mapSheet.hidden || !el.portal.hidden || !el.targetSheet.hidden || !el.voiceSheet.hidden; }
 function closeAnySheet(){
   var was = anySheetOpen();
   el.sheet.hidden = true; el.nameSheet.hidden = true; el.pickSheet.hidden = true; el.streakSheet.hidden = true; el.mapSheet.hidden = true; el.inspect.hidden = true; mapView.sel = -1;
-  el.portal.hidden = true; el.targetSheet.hidden = true; portal.drag = null;
+  el.portal.hidden = true; el.targetSheet.hidden = true; el.voiceSheet.hidden = true; portal.drag = null;
   editingId = null; editDeckId = null; nameMode = null; disarm();
   if(was && lastFocus && lastFocus.focus){ try{ lastFocus.focus(); }catch(e){} }
 }
-[el.sheet, el.nameSheet, el.pickSheet, el.streakSheet].forEach(function(n){
+[el.sheet, el.nameSheet, el.pickSheet, el.streakSheet, el.voiceSheet].forEach(function(n){
   n.addEventListener('click', function(e){ if(e.target === n) closeAnySheet(); });
 });
 
@@ -2869,7 +3061,7 @@ function showTab(name){
   tab = name;
   ['altar','study','build','manage'].forEach(function(t){ $('#screen-' + t).hidden = (t !== name); });
   $$('.tab').forEach(function(b){ if(b.getAttribute('data-tab') === name) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
-  if(name !== 'study' && synth && (synth.speaking || synth.pending)) synth.cancel();
+  if(name !== 'study') stopSpeech();
   if(name === 'altar') renderAltar();
   if(name === 'study'){ autoAdvanceDeck(); renderStudy(); }
   if(name === 'build') renderTargetSelect();
@@ -3698,7 +3890,7 @@ document.addEventListener('click', function(e){
       var isW = a === 'speak-word', stx = isW ? cur().word : cur().sentences[+t.getAttribute('data-i')];
       var nowT = Date.now(), dbl = t._tap && nowT - t._tap < 350;
       t._tap = dbl ? 0 : nowT;                                  /* single tap: normal speed right away; second tap within 350ms: slow */
-      speak(stx, dbl ? RATE_SLOW : (isW ? RATE_NORMAL : 0.95), t, langFor(cur(), stx, deck()));
+      speak(stx, dbl ? RATE_SLOW : RATE_NORMAL, t, langFor(cur(), stx, deck()));
       break;
     case 'copy-sent':
       if(cur()) copySentence(cur().sentences[+t.getAttribute('data-i')], t);
@@ -3735,6 +3927,13 @@ document.addEventListener('click', function(e){
       var s = templateSentences(w, el.fPos.value || guessPos(w), regenSalt, rl);
       el.fS1.value = s[0].text; el.fT1.value = s[0].en; el.fS2.value = s[1].text; el.fT2.value = s[1].en; el.fTz1.value = ''; el.fTz2.value = '';
       break;
+    case 'voice-diag': openVoiceDiag(t); break;
+    case 'voice-close': closeAnySheet(); break;
+    case 'voice-test': voiceTest(t.getAttribute('data-l')); break;
+    case 'voice-refresh': refreshVoices(); renderVoiceDiag(); toast(refreshVoices().length + ' voices exposed'); break;
+    case 'voice-copy': copyText(vdText()).then(function(ok){ toast(ok ? 'Diagnostics copied' : 'Could not copy. Select the text manually.'); }); break;
+    case 'tts-cloud-test': cloudTest(); break;
+    case 'tts-copy-worker': copyText($('#ttsSrcCode').textContent).then(function(ok){ toast(ok ? 'Server code copied' : 'Could not copy. Open the code and select it.'); }); break;
     case 'cloud-sync': forceSync(); break;
     case 'cloud-save-config': saveConfig(); break;
     case 'cloud-clear-config': clearConfig(); break;
@@ -3809,6 +4008,114 @@ document.addEventListener('toggle', function(e){
   if(!d || !d.classList || !d.classList.contains('formats') || !d.open) return;
   setTimeout(function(){ try{ d.scrollIntoView({block:'nearest', behavior:REDUCED ? 'auto' : 'smooth'}); }catch(err){} }, 60);
 }, true);
+/* ---------- Voice Diagnostics ---------- */
+var VD_TESTS = {
+  ja:{lang:'ja-JP', label:'Japanese', text:'こんにちは。今日はいい天気ですね。', want:/O.?ren/i, wantName:'O-ren'},
+  ko:{lang:'ko-KR', label:'Korean', text:'안녕하세요. 오늘 날씨가 좋네요.', want:/Yuna/i, wantName:'Yuna'},
+  en:{lang:'en-US', label:'English', text:'Hello! This is a test of the English voice.', want:/Evan/i, wantName:'Evan'}
+};
+var vdTests = {}, vdCloud = null;
+function voiceDiagRefresh(){ if(el.voiceSheet && !el.voiceSheet.hidden) renderVoiceDiag(); }
+function vdSelection(k){
+  var t = VD_TESTS[k], pk = pickVoice(t.lang), all = refreshVoices();
+  var exposed = all.some(function(v){ return t.want.test(v.name || ''); });
+  return {t:t, pk:pk, exposed:exposed, total:all.length};
+}
+function vdSorted(){
+  return refreshVoices().slice().sort(function(a, b){ return (a.lang || '').localeCompare(b.lang || '') || (a.name || '').localeCompare(b.name || ''); });
+}
+function renderVoiceDiag(){
+  var panel = el.voiceSheet.firstElementChild, keep = panel ? panel.scrollTop : 0, listEl = el.voiceBody.querySelector ? el.voiceBody.querySelector('.vd-list') : null, keepList = listEl ? listEl.scrollTop : 0;
+  var vs = vdSorted(), h = '';
+  if(!synth){
+    h += '<div class="vd-card"><b class="vd-warn">Speech synthesis is not supported in this browser.</b></div>';
+  } else {
+    h += '<div class="vd-card"><h3>Voices exposed (' + vs.length + ')</h3>';
+    if(!vs.length) h += '<p class="vd-warn">The browser returned an empty list. Tap Refresh Voices; some browsers load voices a moment after the first call.</p>';
+    else h += '<div class="vd-list" tabindex="0">' + vs.map(function(v){
+      return esc(v.name) + ' <span class="vd-dim">| ' + esc(v.lang) + ' | localService=' + v.localService + ' | default=' + v['default'] + '</span>';
+    }).join('<br>') + '</div>';
+    h += '</div>';
+    h += '<div class="vd-card"><h3>Voice the app selects</h3>';
+    ['ja', 'ko', 'en'].forEach(function(k){
+      var d = vdSelection(k), v = d.pk.voice;
+      h += '<p><b>' + d.t.label + '</b> (' + d.t.lang + '): ';
+      if(v) h += esc(v.name) + ' <span class="vd-dim">(' + esc(v.lang) + ', ' + (v.localService ? 'on-device' : 'network') + ')</span><br><span class="vd-dim">Reason: ' + TIER_TXT[d.pk.tier] + '</span>';
+      else h += '<span class="vd-warn">no ' + d.t.label + ' voice exposed. Playback falls back to the engine default for ' + d.t.lang + ', which may be silent or robotic.</span>';
+      h += '<br>' + (d.exposed ? '<span class="vd-ok">' + d.t.wantName + ' is exposed by this browser.</span>' : '<span class="vd-warn">' + d.t.wantName + ' is NOT exposed by this browser' + (d.total ? '.' : ' (no voices at all yet).') + '</span>');
+      if(v && d.pk.tier >= 3 && d.total) h += '<br><span class="vd-warn">Using the best available ' + d.t.label + ' voice. Nothing exposed has Enhanced/Premium in its name.</span>';
+      h += '</p>';
+    });
+    h += '<p class="vd-note">The API shows only name, language, localService and default. It has no quality field, so "Enhanced/Premium" is judged from the name only. Voices downloaded in iOS Settings may not be exposed to web pages at all; the app cannot force one that is missing from this list.</p></div>';
+    h += '<div class="vd-card"><h3>Test playback</h3><div class="vd-row">' + ['ja', 'ko', 'en'].map(function(k){ return '<button class="btn small" data-action="voice-test" data-l="' + k + '">' + VD_TESTS[k].label + '</button>'; }).join('') + '</div>';
+    ['ja', 'ko', 'en'].forEach(function(k){
+      var r = vdTests[k]; if(!r) return;
+      h += '<p><b>' + VD_TESTS[k].label + '</b><br><span class="vd-dim">Requested voice:</span> ' + esc(r.requested) + '<br><span class="vd-dim">utterance.voice used:</span> ' + esc(r.actual) + '</p>';
+    });
+    h += '<p class="vd-note">"utterance.voice used" is what the app assigned. The engine decides the final sound.</p></div>';
+  }
+  h += '<div class="vd-row"><button class="btn small" data-action="voice-refresh"><span data-icon="refresh"></span>Refresh Voices</button><button class="btn small" data-action="voice-copy"><span data-icon="copy"></span>Copy Diagnostics</button></div>';
+  h += '<div class="vd-card"><h3>Speech errors (' + speechErrors.length + ')</h3>' + (speechErrors.length ? '<div class="vd-list">' + speechErrors.map(esc).join('<br>') + '</div>' : '<p class="vd-dim">None recorded.</p>') + '</div>';
+  h += '<div class="vd-card"><h3>Cloud voice (optional)</h3>' +
+    '<p class="vd-note">Off by default. Needs your own HTTPS endpoint that holds the API key server side (see tts-worker.js). Never paste an API key here.</p>' +
+    '<p><label for="ttsMode"><b>Use cloud voice</b></label><select id="ttsMode"><option value="off"' + (ttsCfg.mode === 'off' ? ' selected' : '') + '>Off</option><option value="fallback"' + (ttsCfg.mode === 'fallback' ? ' selected' : '') + '>Only when no preferred / Enhanced voice is available</option><option value="always"' + (ttsCfg.mode === 'always' ? ' selected' : '') + '>Always</option></select></p>' +
+    '<p><label for="ttsEndpoint"><b>Endpoint URL</b></label><input id="ttsEndpoint" type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://your-endpoint.example/tts" value="' + esc(ttsCfg.endpoint) + '"></p>' +
+    '<div class="vd-row"><button class="btn small" data-action="tts-cloud-test">Test cloud voice</button></div>' +
+    (vdCloud ? '<p class="' + (vdCloud.ok ? 'vd-ok' : 'vd-warn') + '">' + esc(vdCloud.msg) + '</p>' : '') +
+    '<p class="vd-note">If the cloud is unreachable the app falls back to the device voice. On iPhone that fallback happens after a network wait, and iOS may block it; tap again to hear it.</p></div>';
+  el.voiceBody.innerHTML = h;
+  $$('#voiceBody [data-icon]').forEach(function(n){ n.insertAdjacentHTML('afterbegin', icon(n.getAttribute('data-icon'), 22)); });
+  if(panel) panel.scrollTop = keep;
+  var l2 = el.voiceBody.querySelector ? el.voiceBody.querySelector('.vd-list') : null; if(l2) l2.scrollTop = keepList;
+}
+function vdText(){
+  var ua = navigator.userAgent || '', m = /OS (\d+[_\d]*) like Mac OS X/.exec(ua);
+  var L = ['Wordstack voice diagnostics', 'Time: ' + new Date().toISOString(), 'UA: ' + ua,
+    'iOS: ' + (m ? m[1].replace(/_/g, '.') : 'n/a') + ' | in-app browser: ' + (/GSA\//.test(ua) ? 'Google app' : /FBAN|FBAV|Instagram|Line\//.test(ua) ? 'other in-app' : 'no/unknown') + ' | Chrome/Firefox iOS shells: ' + (/CriOS|FxiOS|EdgiOS/.test(ua) ? 'yes' : 'no'),
+    'speechSynthesis: ' + (synth ? 'supported' : 'NOT supported'), 'Voices exposed: ' + refreshVoices().length];
+  vdSorted().forEach(function(v){ L.push('  ' + v.name + ' | ' + v.lang + ' | localService=' + v.localService + ' | default=' + v['default']); });
+  ['ja', 'ko', 'en'].forEach(function(k){
+    var d = vdSelection(k), v = d.pk.voice;
+    L.push(d.t.label + ' selected: ' + (v ? v.name + ' (' + v.lang + ', ' + (v.localService ? 'on-device' : 'network') + ') - ' + TIER_TXT[d.pk.tier] : 'NONE exposed') + ' | ' + d.t.wantName + ': ' + (d.exposed ? 'exposed' : 'NOT exposed'));
+    if(vdTests[k]) L.push('  last test -> requested: ' + vdTests[k].requested + ' | utterance.voice: ' + vdTests[k].actual);
+  });
+  L.push('Cloud TTS: mode=' + ttsCfg.mode + ', endpoint host=' + (function(){ try{ return new URL(ttsCfg.endpoint).host; }catch(e){ return '(none)'; } })());
+  if(vdCloud) L.push('Cloud last test: ' + vdCloud.msg);
+  L.push('Speech errors (' + speechErrors.length + '):'); speechErrors.forEach(function(x){ L.push('  ' + x); });
+  return L.join('\n');
+}
+var vdTimers = [];
+function openVoiceDiag(trigger){
+  lastFocus = trigger || document.activeElement;
+  refreshVoices(); renderVoiceDiag(); showSheet(el.voiceSheet);
+  var n0 = voiceCache.length;
+  vdTimers.forEach(clearTimeout);
+  vdTimers = [400, 1500].map(function(ms){ return setTimeout(function(){ refreshVoices(); if(voiceCache.length !== n0){ n0 = voiceCache.length; voiceDiagRefresh(); } }, ms); });
+}
+function voiceTest(k){
+  var t = VD_TESTS[k]; if(!t) return;
+  lastSpeak = null;
+  speak(t.text, RATE_NORMAL, null, t.lang, {local:true});
+  var pk = pickVoice(t.lang);
+  vdTests[k] = lastSpeak ? {requested:lastSpeak.requested, actual:lastSpeak.actual} : {requested:pk.voice ? pk.voice.name : '(none exposed)', actual:'(not started)'};
+  renderVoiceDiag();
+}
+function cloudTest(){
+  if(!/^https:\/\/\S+$/.test(ttsCfg.endpoint)){ vdCloud = {ok:false, msg:'Enter an https:// endpoint first.'}; renderVoiceDiag(); return; }
+  if(typeof Audio === 'undefined'){ vdCloud = {ok:false, msg:'Audio playback is not available here.'}; renderVoiceDiag(); return; }
+  primeAudio(); vdCloud = {ok:true, msg:'Contacting endpoint...'}; renderVoiceDiag();
+  var t0 = Date.now(), tok = ++speakToken;
+  fetchCloud('こんにちは。今日はいい天気ですね。', 'ja-JP', RATE_NORMAL).then(function(b){
+    vdCloud = {ok:true, msg:'Endpoint OK: ' + Math.round(b.size / 1024) + ' KB audio in ' + (Date.now() - t0) + ' ms.'};
+    var url = URL.createObjectURL(b); ttsAudio.onended = ttsAudio.onerror = null; ttsAudio.src = url; var p = ttsAudio.play(); if(p && p.catch) p.catch(function(e){ vdCloud = {ok:false, msg:'Audio fetched, but play() was blocked: ' + (e && e.name || e)}; voiceDiagRefresh(); });
+    renderVoiceDiag();
+  }).catch(function(e){ logSpeechError('cloud-test', String(e && e.message || e)); vdCloud = {ok:false, msg:'Endpoint failed: ' + String(e && e.message || e)}; renderVoiceDiag(); });
+}
+el.voiceBody.addEventListener('change', function(e){
+  var t = e.target; if(!t || !t.id) return;
+  if(t.id === 'ttsMode'){ ttsCfg.mode = /^(off|fallback|always)$/.test(t.value) ? t.value : 'off'; saveTtsCfg(); }
+  if(t.id === 'ttsEndpoint'){ ttsCfg.endpoint = String(t.value || '').trim(); saveTtsCfg(); vdCloud = null; renderVoiceDiag(); }
+});
 el.processBtn.addEventListener('click', processWords);
 el.newBtn.addEventListener('click', function(){ if(manageDeckId) openEditor(manageDeckId, null); });
 el.clearBtn.addEventListener('click', function(){
