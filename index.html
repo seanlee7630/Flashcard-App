@@ -433,7 +433,13 @@ select{
 /* ---- language expedition: header pills + map ---- */
 .top{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;justify-content:normal;gap:8px}
 .brand{justify-self:start;grid-column:1}
-.exp-pills{grid-column:2;display:flex;align-items:center;justify-content:center;gap:4px}
+.top-carousel{grid-column:2;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:pan-y;width:var(--car-w,156px);max-width:100%}
+.top-track{display:flex;width:100%;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.top-slide{flex:0 0 100%;display:flex;align-items:center;justify-content:center;gap:4px}
+.carousel-dots{display:flex;gap:4px;margin-top:2px}
+.c-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .2s,transform .2s}
+.c-dot.active{background:var(--ti);transform:scale(1.2)}
+@media (prefers-reduced-motion:reduce){ .top-track,.c-dot{transition:none} }
 .streak-cluster{grid-column:3;justify-self:end}
 .pill-btn{min-width:44px;min-height:44px;padding:0;border:0;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
 .pill-in{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 8px;border-radius:999px;
@@ -666,10 +672,25 @@ select{
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><h1>Wordstack</h1></div>
-    <div class="exp-pills" role="group" aria-label="Words mastered per language. Open the expedition map">
-      <button class="pill-btn" data-action="open-map" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="pill-ja">0</span></span></button>
-      <button class="pill-btn" data-action="open-map" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="pill-ko">0</span></span></button>
-      <button class="pill-btn" data-action="open-map" data-lang="en" aria-haspopup="dialog" aria-label="English: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="pill-en">0</span></span></button>
+    <div class="top-carousel" id="topCarousel" role="group" aria-roledescription="carousel" aria-label="Swipe to switch between Vocabulary Mastered and Total Input Hours">
+      <div class="top-track" id="topTrack">
+        <!-- Slide 0: vocabulary mastered -->
+        <div class="top-slide" id="slideVocab" data-mode="vocab">
+          <button class="pill-btn" data-action="open-map" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="pill-ja">0</span></span></button>
+          <button class="pill-btn" data-action="open-map" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="pill-ko">0</span></span></button>
+          <button class="pill-btn" data-action="open-map" data-lang="en" aria-haspopup="dialog" aria-label="English: 0 words"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="pill-en">0</span></span></button>
+        </div>
+        <!-- Slide 1: total input / immersion hours -->
+        <div class="top-slide" id="slideHours" data-mode="hours">
+          <button class="pill-btn" data-action="open-portal" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="hrs-ja">0.0h</span></span></button>
+          <button class="pill-btn" data-action="open-portal" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="hrs-ko">0.0h</span></span></button>
+          <button class="pill-btn" data-action="open-portal" data-lang="en" aria-haspopup="dialog" aria-label="English: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="hrs-en">0.0h</span></span></button>
+        </div>
+      </div>
+      <div class="carousel-dots" aria-hidden="true">
+        <span class="c-dot active" id="dot0"></span>
+        <span class="c-dot" id="dot1"></span>
+      </div>
     </div>
     <div class="streak-cluster">
       <button class="streak-badge" id="streakBadge" data-action="open-streak" aria-haspopup="dialog">
@@ -2633,7 +2654,7 @@ el.editForm.addEventListener('submit', function(e){
   var d = deckById(editDeckId); if(!d) return;
   var word = el.fWord.value.trim();
   if(!word){ el.editError.textContent = 'Enter a word for this card.'; el.fWord.focus(); return; }
-  var dupe = d.cards.some(function(c){ return c.id !== editingId && c.word.toLowerCase() === word.toLowerCase(); });
+  var dupe = d.cards.some(function(c){ return c.id !== editingId && normWordKey(c.word) === normWordKey(word); });
   if(dupe){ el.editError.textContent = 'That word is already in this deck.'; el.fWord.focus(); return; }
   var s1 = el.fS1.value.trim(), s2 = el.fS2.value.trim(), t1 = el.fT1.value.trim(), t2 = el.fT2.value.trim(), pos = el.fPos.value;
   var lang = el.fLang.value || d.lang || detectLang(word);
@@ -2831,6 +2852,13 @@ el.targetDeck.addEventListener('change', function(){
   if(!el.newDeckField.hidden) el.newDeckName.focus();
 });
 
+/* One key for "is this the same word?": trimmed, lower-cased, with list bullets, "1." / "2)" numbering and quote/bracket marks stripped from the ends.
+   Digits that belong to the word itself (w2, 3D, catch22) are kept so different words never collapse into one key. */
+function normWordKey(w){
+  return String(w || '').trim().toLowerCase()
+    .replace(/^(?:[\s\-*•.)"“'”‘\[\]{}「」]|\d+[.)])+/, '')
+    .replace(/[\s\-*•.)"“'”‘\[\]{}「」]+$/, '');
+}
 function processWords(){
   if(busy) return;
   var items = parseInput(el.words.value);
@@ -2848,13 +2876,19 @@ function processWords(){
   }
   busy = true; el.processBtn.disabled = true; el.processBtn.textContent = 'Processing…';
   var useApi = true, api = {down:false, hits:0, trDown:false, zhHits:0};
-  var have = {}; (tdeck ? tdeck.cards : []).forEach(function(c){ if(!c.sample) have[c.word.toLowerCase()] = 1; });
+  /* existing words: the target deck plus every other deck of the same language (new decks check their chosen language too) */
+  var have = {}, tb = String(deckLang || '').slice(0, 2).toLowerCase();
+  state.decks.forEach(function(d){
+    if(!(d === tdeck || (tb && String(d.lang || '').slice(0, 2).toLowerCase() === tb))) return;
+    d.cards.forEach(function(c){ if(!c.sample){ var hk = normWordKey(c.word); if(hk) have[hk] = 1; } });
+  });
   var list = items.slice(0, 300), made = [], dupes = 0, seen = {}, i = 0;
   function next(){
     if(i >= list.length) return Promise.resolve();
-    var it = list[i], k = it.word.toLowerCase(); i++;
+    var it = list[i], k = normWordKey(it.word); i++;
     setStatus('Making card ' + i + ' of ' + list.length + ': ' + it.word, (i - 1) / list.length);
-    if(have[k] || seen[k]){ dupes++; return next(); }
+    if(!k) return next();
+    if(have[k] || seen[k]){ dupes++; return next(); }      /* duplicate: no card is built at all */
     seen[k] = 1;
     return buildCard(it, useApi, api, deckLang).then(function(c){ made.push(c); return next(); });
   }
@@ -2870,7 +2904,7 @@ function processWords(){
       parts.push('Added ' + made.length + (made.length === 1 ? ' card' : ' cards') + ' to “' + d.name + '”');
       if(created){ el.newDeckName.value = ''; triggerHaptic([10, 40, 18]); }
     } else parts.push('No new cards');
-    if(dupes) parts.push(dupes + ' already in this deck');
+    if(dupes) parts.push('Skipped ' + dupes + ' duplicate ' + (dupes === 1 ? 'word' : 'words') + ' already in your cards');
     if(items.length > 300) parts.push('only the first 300 words were used');
     if(useApi && api.down) parts.push('online lookup unavailable, used the built-in word list and templates');
     else if(useApi && api.hits) parts.push(api.hits + ' from the online dictionary');
@@ -2973,8 +3007,74 @@ function renderPills(){
       var b = n.closest ? n.closest('button') : null;
       if(b) b.setAttribute('aria-label', LANG_META[k].name + ': ' + fmtN(t[k]) + ' words. Open expedition map');
     }
+    var h = $('#hrs-' + k), hv = (state.lifetimeHours && state.lifetimeHours[k]) || 0;
+    if(h){
+      h.textContent = fmtHrs(hv) + 'h';
+      var hb = h.closest ? h.closest('button') : null;
+      if(hb) hb.setAttribute('aria-label', LANG_META[k].name + ': ' + fmtHrs(hv) + ' hours of input. Open ritual portal');
+    }
   });
+  sizeTopCarousel();
 }
+/* ---------- header carousel: Vocabulary mastered <-> input Hours ---------- */
+var topMode = 0;
+try{ topMode = localStorage.getItem('wordstack.topMode') === '1' ? 1 : 0; }catch(e){}
+function sizeTopCarousel(){          /* the header column is auto-sized, so give the carousel the width of its widest slide */
+  try{
+    var car = $('#topCarousel'); if(!car || !car.style) return;
+    var w = 0;
+    $$('.top-slide', car).forEach(function(sl){
+      var sum = 0, bs = $$('.pill-btn', sl);
+      bs.forEach(function(b){ sum += b.offsetWidth; });
+      if(bs.length) sum += (bs.length - 1) * 4;
+      if(sum > w) w = sum;
+    });
+    if(w > 0) car.style.setProperty('--car-w', Math.ceil(w) + 'px');
+  }catch(e){}
+}
+function setTopMode(m, fromUser){
+  m = m ? 1 : 0;
+  var changed = m !== topMode; topMode = m;
+  var track = $('#topTrack'); if(track && track.style) track.style.transform = 'translateX(' + (-100 * m) + '%)';
+  var d0 = $('#dot0'), d1 = $('#dot1');
+  if(d0 && d0.classList) d0.classList.toggle('active', m === 0);
+  if(d1 && d1.classList) d1.classList.toggle('active', m === 1);
+  var sv = $('#slideVocab'), sh = $('#slideHours');
+  if(sv && sv.setAttribute) sv.setAttribute('aria-hidden', m === 0 ? 'false' : 'true');
+  if(sh && sh.setAttribute) sh.setAttribute('aria-hidden', m === 1 ? 'false' : 'true');
+  if(changed){
+    try{ localStorage.setItem('wordstack.topMode', String(m)); }catch(e){}
+    if(fromUser) triggerHaptic(8);
+  }
+}
+(function(){
+  var car = $('#topCarousel'); if(!car || !car.addEventListener) return;
+  var g = null, swipedAt = 0;
+  car.addEventListener('pointerdown', function(e){
+    if(e.button > 0) return;
+    g = {id:e.pointerId, x:e.clientX, y:e.clientY, done:false};
+  });
+  car.addEventListener('pointermove', function(e){
+    if(!g || e.pointerId !== g.id || g.done) return;
+    var dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if(Math.abs(dx) > 25 && Math.abs(dx) > Math.abs(dy) * 1.2){
+      g.done = true; swipedAt = Date.now();
+      setTopMode(dx < 0 ? 1 : 0, true);          /* swipe left -> Hours, swipe right -> Vocabulary */
+    }
+  });
+  function end(e){ if(g && (!e || e.pointerId === g.id)) g = null; }
+  car.addEventListener('pointerup', end); car.addEventListener('pointercancel', end);
+  /* a drag that switched slides must not also tap the pill it ended on; plain taps are never touched */
+  car.addEventListener('click', function(e){ if(Date.now() - swipedAt < 400){ e.preventDefault(); e.stopPropagation(); } }, true);
+  /* keyboard / screen-reader focus on a pill in the hidden slide brings that slide into view */
+  car.addEventListener('focusin', function(e){
+    var sl = e.target.closest && e.target.closest('.top-slide');
+    if(sl) setTopMode(sl.getAttribute('data-mode') === 'hours' ? 1 : 0, false);
+    car.scrollLeft = 0;
+  });
+  setTopMode(topMode, false);
+  window.addEventListener('resize', sizeTopCarousel);
+})();
 function renderExpedition(){
   renderPills();
   if(!el.mapSheet.hidden) renderMap(false);
@@ -3273,7 +3373,7 @@ function afterTracking(fromGrade){
     toast(ALT_META[k].flag + ' ' + ALT_META[k].name + ' flame lit · ' + litCount() + '/3', 2200);
     triggerHaptic([20, 40, 20]);
   }
-  renderStreak(); renderAltar();
+  renderStreak(); renderAltar(); renderPills();
   if(!el.portal.hidden) renderPortal(ev.newlyLit.indexOf(portal.lang) >= 0);
   return ev;
 }
@@ -3831,8 +3931,8 @@ document.addEventListener('toggle', function(e){
    what gives the Taptic tick). The switch's own click is held back, and once the switch has finished toggling (its change event, same tap, same
    gesture) the button's normal click runs exactly once. This way a handler that rebuilds the DOM can never remove the switch mid-toggle.
    No script ever clicks or toggles a switch. Left alone on purpose: the flashcard itself, the Immersion slider and everything inside the portal's
-   swipe area (Output hold card, Vocabulary card, reset), because a switch there would change their drag/hold behaviour. */
-var HX_SKIP = '#portalBody, [data-hx="off"]';
+   swipe area (Output hold card, Vocabulary card, reset) and the header pill carousel, because a switch there would change their drag/hold/swipe behaviour. */
+var HX_SKIP = '#portalBody, #topCarousel, [data-hx="off"]';
 function hxEligible(b){ return !b.querySelector(':scope > .hx-sw') && !b.closest(HX_SKIP); }
 function hxAttach(b){
   var sw = document.createElement('input');
