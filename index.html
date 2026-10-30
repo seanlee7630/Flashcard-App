@@ -220,6 +220,10 @@ h1,h2,p,ul{margin:0}
 .ex-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
 .ex li p{margin:0;min-width:0;font-size:16px;line-height:1.5;color:var(--body);overflow-wrap:anywhere}
 .ex li p.ex-en{font-size:13px;line-height:1.45;color:var(--muted)}
+.sentence-breakdown{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:.78rem;line-height:1.35}
+.vocab-chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:3px 7px;color:var(--ti-dim);overflow-wrap:anywhere}
+.vocab-chip strong{color:var(--ti);font-weight:600}
+.vocab-chip-reading{opacity:.85}
 .ex li p.ex-read,.sentence-reading{font-size:13px;line-height:1.5;color:var(--ti-dim);letter-spacing:.03em;word-break:keep-all;overflow-wrap:break-word}
 .ex li p.ex-rom{font-size:13px;line-height:1.45;color:var(--ti-dim);letter-spacing:.015em;font-style:italic}
 mark{background:rgba(226,217,200,.1);color:var(--ti);padding:0 2px;border-radius:3px;font-weight:600;box-shadow:inset 0 -1px 0 rgba(226,217,200,.55)}
@@ -468,6 +472,16 @@ select{
   transition:transform .12s ease,border-color .2s ease}
 .pill-in .fl{font-size:13px;line-height:1}
 .pill-btn:active .pill-in{transform:scale(.95)}
+.pill-btn.goal-met .pill-in{color:#fcd34d;border-color:rgba(252,211,77,.55)}
+.goal-rows{display:flex;flex-direction:column;gap:10px;margin:4px 0 14px}
+.goal-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--etch-line);border-radius:16px;background:var(--etch)}
+.goal-row .gl{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ti)}
+.goal-row .gl .fl{font-size:20px;line-height:1}
+.goal-row .gl small{display:block;font-size:11px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.06em}
+.goal-step{display:grid;grid-template-columns:44px 52px 44px;align-items:center;justify-items:center}
+.goal-step .icon-btn{min-width:44px;min-height:44px;border-radius:14px}
+.goal-step output{font-family:var(--font-mono);font-size:18px;font-weight:600;color:var(--ti);font-variant-numeric:tabular-nums}
+.goal-step .icon-btn:disabled{opacity:.3;pointer-events:none}
 @media (max-width:459px){ .brand,.cal-btn{display:none} }
 @media (max-width:374px){
   .top{grid-template-columns:0 minmax(0,1fr) auto;gap:6px}
@@ -692,7 +706,7 @@ select{
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><h1>Wordstack</h1></div>
-    <div class="top-carousel" id="topCarousel" role="group" aria-roledescription="carousel" aria-label="Swipe to switch between Vocabulary Mastered and Total Input Hours">
+    <div class="top-carousel" id="topCarousel" role="group" aria-roledescription="carousel" aria-label="Swipe to switch between Vocabulary Mastered, Total Input Hours and Daily Review Goals">
       <div class="top-track" id="topTrack">
         <!-- Slide 0: vocabulary mastered -->
         <div class="top-slide" id="slideVocab" data-mode="vocab">
@@ -706,10 +720,17 @@ select{
           <button class="pill-btn" data-action="open-portal" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="hrs-ko">0.0h</span></span></button>
           <button class="pill-btn" data-action="open-portal" data-lang="en" aria-haspopup="dialog" aria-label="English: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="hrs-en">0.0h</span></span></button>
         </div>
+        <!-- Slide 2: daily review goal progress -->
+        <div class="top-slide" id="slideTarget" data-mode="target">
+          <button class="pill-btn" data-action="open-goal-modal" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0 of 20 daily reviews"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="target-ja">0/20</span></span></button>
+          <button class="pill-btn" data-action="open-goal-modal" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0 of 20 daily reviews"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="target-ko">0/20</span></span></button>
+          <button class="pill-btn" data-action="open-goal-modal" data-lang="en" aria-haspopup="dialog" aria-label="English: 0 of 20 daily reviews"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="target-en">0/20</span></span></button>
+        </div>
       </div>
       <div class="carousel-dots" aria-hidden="true">
         <span class="c-dot active" id="dot0"></span>
         <span class="c-dot" id="dot1"></span>
+        <span class="c-dot" id="dot2"></span>
       </div>
     </div>
     <div class="streak-cluster">
@@ -944,6 +965,19 @@ service cloud.firestore {
   </div>
 </div>
 
+<div class="sheet-backdrop" id="goalSheet" hidden>
+  <div class="sheet goal-sheet" role="dialog" aria-modal="true" aria-labelledby="goalTitle" tabindex="-1">
+    <div class="sheet-head">
+      <h2 id="goalTitle">Daily Review Goals</h2>
+      <button class="icon-btn" data-action="close-sheet" aria-label="Close"><span data-icon="x"></span></button>
+    </div>
+    <div class="goal-rows" id="goalRows"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn primary" data-action="goal-save"><span data-icon="check"></span>Save</button>
+      <button type="button" class="btn" data-action="close-sheet">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="sheet-backdrop" id="nameSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="nameTitle" tabindex="-1">
     <div class="sheet-head">
@@ -1367,10 +1401,12 @@ var LANG_ORDER = ['ja', 'ko', 'en'];
    small timestamps (at / inAt / outAt) so two devices can merge field by field. lifetimeBase = hours logged before today. */
 var ALTAR_LANGS = ['en', 'ja', 'ko'];
 var TARGET_DEFAULT = {en:1, ja:2, ko:0.5};
+var REVIEW_TARGET_DEFAULT = 20;
+function reviewTarget(k){ var n = state.reviewTargets && Number(state.reviewTargets[k]); return (n >= 5) ? n : REVIEW_TARGET_DEFAULT; }
 function r2(n){ return Math.round(n * 100) / 100; }
 function freshProgress(date){
   var o = {date:date};
-  ALTAR_LANGS.forEach(function(k){ o[k] = {inputMinutes:0, deckDone:false, outputDone:false, inAt:0, outAt:0}; });
+  ALTAR_LANGS.forEach(function(k){ o[k] = {inputMinutes:0, deckDone:false, outputDone:false, inAt:0, outAt:0, reviewsToday:0}; });
   return o;
 }
 function normalizeTracking(){
@@ -1384,8 +1420,13 @@ function normalizeTracking(){
     var bv = Number(b[k]); b[k] = (isFinite(bv) && bv >= 0) ? r2(bv) : 0;
     var e = (dp[k] && typeof dp[k] === 'object') ? dp[k] : {}, m = Math.round(Number(e.inputMinutes));
     dp[k] = {inputMinutes:(isFinite(m) && m >= 0) ? Math.min(1440, m) : 0, deckDone:!!e.deckDone, outputDone:!!e.outputDone,
-             inAt:e.inAt >= 0 ? Number(e.inAt) : 0, outAt:e.outAt >= 0 ? Number(e.outAt) : 0};
+             inAt:e.inAt >= 0 ? Number(e.inAt) : 0, outAt:e.outAt >= 0 ? Number(e.outAt) : 0,
+             reviewsToday:(isFinite(Number(e.reviewsToday)) && Number(e.reviewsToday) > 0) ? Math.round(Number(e.reviewsToday)) : 0};
   });
+  /* daily review goals (cards per language). Kept apart from dailyTargets, which already holds the Altar's input-hour targets. */
+  var rt = (state.reviewTargets && typeof state.reviewTargets === 'object') ? state.reviewTargets : {};
+  ALTAR_LANGS.forEach(function(k){ var n = Math.round(Number(rt[k])); rt[k] = (isFinite(n) && n >= 5) ? Math.min(500, n) : REVIEW_TARGET_DEFAULT; });
+  state.reviewTargets = rt; state.reviewTargetsAt = Number(state.reviewTargetsAt) >= 0 ? Number(state.reviewTargetsAt) : 0;
   state.dailyTargets = t; state.lifetimeBase = b; state.dailyProgress = dp;
   rolloverDay();
   recalcLifetime();
@@ -1458,7 +1499,7 @@ function normalizeState(){
 }
 normalizeState();
 function syncSig(){
-  return JSON.stringify([state.decks.map(function(d){ return {id:d.id, name:d.name, lang:d.lang, createdAt:d.createdAt, cards:d.cards}; }), state.streak, state.daily, state.dailyTargets, state.lifetimeBase, state.dailyProgress]);
+  return JSON.stringify([state.decks.map(function(d){ return {id:d.id, name:d.name, lang:d.lang, createdAt:d.createdAt, cards:d.cards}; }), state.streak, state.daily, state.dailyTargets, state.lifetimeBase, state.dailyProgress, state.reviewTargets]);
 }
 var lastSig = syncSig();
 var SYNC_DEBOUNCE = 1500, CFG_KEY = 'wordstack.fbconfig', DEV_KEY = 'wordstack.device';
@@ -1498,6 +1539,7 @@ var el = {
   sheetDelete:$('#sheetDelete'), sheetDeleteLabel:$('#sheetDeleteLabel'),
   fWord:$('#f-word'), fReading:$('#f-reading'), fLang:$('#f-lang'), fPhon:$('#f-phon'), fPos:$('#f-pos'), fDef:$('#f-def'), fDefZh:$('#f-defzh'), fTz1:$('#f-tz1'), fTz2:$('#f-tz2'), fwDef:$('#fw-def'), fwT1:$('#fw-t1'), fwT2:$('#fw-t2'), fEnNote:$('#fEnNote'),
   fS1:$('#f-s1'), fT1:$('#f-t1'), fS2:$('#f-s2'), fT2:$('#f-t2'),
+  goalSheet:$('#goalSheet'), goalRows:$('#goalRows'),
   nameSheet:$('#nameSheet'), nameTitle:$('#nameTitle'), nameForm:$('#nameForm'), nameInput:$('#nameInput'), nameLang:$('#nameLang'), nameError:$('#nameError'),
   pickSheet:$('#pickSheet'), pickList:$('#pickList'),
   cloudStatus:$('#cloudStatus'), cloudStatusText:$('#cloudStatusText'), cloudNote:$('#cloudNote'), cloudSyncBtn:$('#cloudSyncBtn'),
@@ -1720,6 +1762,15 @@ function highlight(text, word){
   return out + esc(text.slice(last));
 }
 
+function breakdownHtml(bd, sl){
+  if(!Array.isArray(bd) || !bd.length) return '';
+  var chips = bd.map(function(it){
+    if(!it || !it.word) return '';
+    return '<span class="vocab-chip"><strong lang="'+sl+'">'+esc(it.word)+'</strong>' + (it.reading ? ' <span class="vocab-chip-reading">('+esc(it.reading)+')</span>' : '') +
+      (it.meaning ? ': <span class="vocab-chip-def">'+esc(it.meaning)+'</span>' : '') + '</span>';
+  }).join('');
+  return chips ? '<div class="sentence-breakdown">'+chips+'</div>' : '';
+}
 /* ---------- study ---------- */
 function cur(){ var d = deck(); return d.cards[d.index]; }
 var showReading = true;
@@ -1796,7 +1847,7 @@ function renderStudy(){
       (rd && sl === 'ja' ? '<p class="ex-read sentence-reading" lang="ja">'+esc(stripTags(rd))+'</p>' : '') +
       (rm && sl === 'ko' ? '<p class="ex-rom" lang="ko-Latn">'+esc(stripTags(rm))+'</p>' : '') +
       (tz ? '<p class="ex-zh" lang="zh-Hant">'+esc(stripTags(tz))+'</p>' : '') +
-      (tr && lc !== 'en' ? '<p class="ex-en" lang="en">'+esc(stripTags(tr))+'</p>' : '') + '</div>' +
+      (tr && lc !== 'en' ? '<p class="ex-en" lang="en">'+esc(stripTags(tr))+'</p>' : '') + breakdownHtml((c.sentenceBreakdowns || [])[i], sl) + '</div>' +
       '<div class="ex-actions">' +
         '<button class="speak" data-action="speak-sent" data-i="'+i+'" aria-label="Read example '+(i+1)+' aloud">'+icon('speaker',20)+'</button>' +
         '<button class="speak copy" data-action="copy-sent" data-i="'+i+'" aria-label="Copy example '+(i+1)+'">'+icon('copy',20)+'</button>' +
@@ -1830,6 +1881,11 @@ function bestStreak(){
     if(run > best) best = run;
   }
   return Math.max(best, streakNow());
+}
+function bumpReviews(k, n){
+  if(ALTAR_LANGS.indexOf(k) < 0) return;
+  rolloverDay();
+  var p = state.dailyProgress[k]; p.reviewsToday = Math.max(0, (p.reviewsToday || 0) + n);
 }
 function reviewedToday(){ return state.daily.date === localDay(0) ? state.daily.ids.length : 0; }
 /* Notes one reviewed card for today's counter. The master streak no longer depends on it: it advances when all three flames are lit (see evaluateDay). */
@@ -2086,7 +2142,7 @@ function mergeProgress(l, r){
     var inNew = ci > ai || (ci === ai && (c.inputMinutes || 0) > (a.inputMinutes || 0));
     o[k] = {inputMinutes:(inNew ? c : a).inputMinutes || 0, inAt:Math.max(ai, ci),
             outputDone:co === ao ? !!(a.outputDone || c.outputDone) : (co > ao ? !!c.outputDone : !!a.outputDone), outAt:Math.max(ao, co),
-            deckDone:!!(a.deckDone || c.deckDone)};
+            deckDone:!!(a.deckDone || c.deckDone), reviewsToday:Math.max(a.reviewsToday || 0, c.reviewsToday || 0)};
   });
   return o;
 }
@@ -2106,22 +2162,26 @@ function mergeData(L, R){
     });
   });
   decks.forEach(function(d){ if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
+  var rtNew = (R.reviewTargets && (R.reviewTargetsAt || 0) > (L.reviewTargetsAt || 0)) ? R : L;
   var tracking = {dailyTargets:mergeTargets(L.dailyTargets, R.dailyTargets), lifetimeBase:mergeBase(L.lifetimeBase, R.lifetimeBase), dailyProgress:mergeProgress(L.dailyProgress, R.dailyProgress)};
-  return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress};
+  return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
+          reviewTargets:rtNew.reviewTargets ? clone(rtNew.reviewTargets) : null, reviewTargetsAt:rtNew.reviewTargetsAt || 0};
 }
 function applyRemote(data, rms, merge){
   var stats = data.stats || {};
   var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null,
                                     dailyTargets:data.dailyTargets ? clone(data.dailyTargets) : null, lifetimeBase:data.lifetimeBase ? clone(data.lifetimeBase) : null,
-                  dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null};
+                  dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null,
+                  reviewTargets:data.reviewTargets ? clone(data.reviewTargets) : null, reviewTargetsAt:Number(data.reviewTargetsAt) || 0};
   cloud.applying = true;
   try{
-    var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress}, incoming) : incoming;
+    var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress, reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, incoming) : incoming;
     if(out.decks.length) state.decks = out.decks;
     state.streak = out.streak; state.daily = out.daily;
     if(out.dailyTargets) state.dailyTargets = out.dailyTargets;
     if(out.lifetimeBase) state.lifetimeBase = out.lifetimeBase;
     if(out.dailyProgress) state.dailyProgress = out.dailyProgress;
+    if(out.reviewTargets){ state.reviewTargets = out.reviewTargets; state.reviewTargetsAt = out.reviewTargetsAt || 0; }
     normalizeState();
     state.meta.remoteMs = rms;
     if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
@@ -2138,7 +2198,8 @@ function applyRemote(data, rms, merge){
 function syncPayload(){
   return {decks:clone(state.decks),
           stats:{streakCount:state.streak.streakCount, lastStudiedDate:state.streak.lastStudiedDate, completedDates:state.streak.completedDates.slice(), daily:clone(state.daily)},
-          dailyTargets:clone(state.dailyTargets), lifetimeHours:clone(state.lifetimeHours), lifetimeBase:clone(state.lifetimeBase), dailyProgress:clone(state.dailyProgress)};
+          dailyTargets:clone(state.dailyTargets), lifetimeHours:clone(state.lifetimeHours), lifetimeBase:clone(state.lifetimeBase), dailyProgress:clone(state.dailyProgress),
+          reviewTargets:clone(state.reviewTargets), reviewTargetsAt:state.reviewTargetsAt || 0};
 }
 function scheduleSync(){
   if(cloud.applying || !cloud.ref) return;
@@ -2444,7 +2505,7 @@ function grade(familiar){
   el.drag.style.transform = 'translate3d(' + (dir * far) + 'px,0,0) rotate(' + (dir * 24) + 'deg)';
   el.drag.style.opacity = '0';
   setTimeout(function(){
-    studyHistory.push({deckId:d.id, id:c.id, familiar:!!familiar, repetitions:c.repetitions || 0, interval:c.interval || 0, dueDate:c.dueDate || null,
+    studyHistory.push({deckId:d.id, id:c.id, lang:cardBase(c, d), familiar:!!familiar, repetitions:c.repetitions || 0, interval:c.interval || 0, dueDate:c.dueDate || null,
       hadDaily:!!(state.daily && state.daily.date === localDay(0) && state.daily.ids.indexOf(c.id) >= 0)});
     if(studyHistory.length > 50) studyHistory.shift();
     sess.queue.shift();
@@ -2454,6 +2515,7 @@ function grade(familiar){
     if(familiar) sess.good++;
     else { sess.again++; sess.queue.splice(Math.min(sess.queue.length, 3), 0, c.id); }
     recordReview(c.id);
+    if(familiar) bumpReviews(cardBase(c, d), 1);          /* only a successful (O) review counts toward the daily goal */
     flipped = false; save();
     var ev = afterTracking(true);
     var lvAfter = expLevels(); renderPills();
@@ -2495,6 +2557,7 @@ function undoGrade(){
   sess.queue.unshift(h.id);
   sess.reviewed = Math.max(0, sess.reviewed - 1);
   if(h.familiar) sess.good = Math.max(0, sess.good - 1); else sess.again = Math.max(0, sess.again - 1);
+  if(h.lang && h.familiar) bumpReviews(h.lang, -1);      /* an X never counted, so undoing it changes nothing */
   if(!h.hadDaily && state.daily && state.daily.ids){
     var k = state.daily.ids.indexOf(h.id); if(k >= 0) state.daily.ids.splice(k, 1);
   }
@@ -2572,15 +2635,15 @@ function showSheet(node){
   var panel = node.firstElementChild;
   if(panel){ panel.scrollTop = 0; panel.focus(); }
 }
-function anySheetOpen(){ return !el.sheet.hidden || !el.nameSheet.hidden || !el.pickSheet.hidden || !el.streakSheet.hidden || !el.mapSheet.hidden || !el.portal.hidden || !el.targetSheet.hidden; }
+function anySheetOpen(){ return !el.goalSheet.hidden || !el.sheet.hidden || !el.nameSheet.hidden || !el.pickSheet.hidden || !el.streakSheet.hidden || !el.mapSheet.hidden || !el.portal.hidden || !el.targetSheet.hidden; }
 function closeAnySheet(){
   var was = anySheetOpen();
-  el.sheet.hidden = true; el.nameSheet.hidden = true; el.pickSheet.hidden = true; el.streakSheet.hidden = true; el.mapSheet.hidden = true; el.inspect.hidden = true; mapView.sel = -1;
+  el.goalSheet.hidden = true; el.sheet.hidden = true; el.nameSheet.hidden = true; el.pickSheet.hidden = true; el.streakSheet.hidden = true; el.mapSheet.hidden = true; el.inspect.hidden = true; mapView.sel = -1;
   el.portal.hidden = true; el.targetSheet.hidden = true; portal.drag = null;
   editingId = null; editDeckId = null; nameMode = null; disarm();
   if(was && lastFocus && lastFocus.focus){ try{ lastFocus.focus(); }catch(e){} }
 }
-[el.sheet, el.nameSheet, el.pickSheet, el.streakSheet].forEach(function(n){
+[el.goalSheet, el.sheet, el.nameSheet, el.pickSheet, el.streakSheet].forEach(function(n){
   n.addEventListener('click', function(e){ if(e.target === n) closeAnySheet(); });
 });
 
@@ -2741,9 +2804,9 @@ function exportJson(d){
     o.pos = c.pos; o.phonetic = c.phonetic; o.definition = c.definition;
     if(c.definitionZh) o.definitionZh = c.definitionZh;
     o.examples = c.sentences.map(function(s, i){
-      var en = (c.translations || [])[i], zh = (c.translationsZh || [])[i], rd = (c.sentenceReadings || [])[i], rm = (c.sentenceRoms || [])[i];
-      if(!en && !zh && !rd && !rm) return s;
-      var e = {text:s}; if(rd) e.reading = rd; if(rm) e.rom = rm; if(en) e.en = en; if(zh) e.zh = zh; return e;
+      var en = (c.translations || [])[i], zh = (c.translationsZh || [])[i], rd = (c.sentenceReadings || [])[i], rm = (c.sentenceRoms || [])[i], bd = (c.sentenceBreakdowns || [])[i];
+      if(!en && !zh && !rd && !rm && !(bd && bd.length)) return s;
+      var e = {text:s}; if(rd) e.reading = rd; if(rm) e.rom = rm; if(en) e.en = en; if(zh) e.zh = zh; if(bd && bd.length) e.breakdown = bd; return e;
     });
     return o;
   }), null, 2);
@@ -2806,10 +2869,10 @@ el.editForm.addEventListener('submit', function(e){
   data.definitionZh = el.fDefZh.value.trim();
   data.translationsZh = pairs.map(function(r){ return r[2]; });
   var oldCard = editingId ? d.cards.filter(function(x){ return x.id === editingId; })[0] : null;
-  ['Readings', 'Roms'].forEach(function(K){
+  ['Readings', 'Roms', 'Breakdowns'].forEach(function(K){
     data['sentence' + K] = pairs.map(function(r){
       var oi = oldCard ? oldCard.sentences.indexOf(r[0]) : -1;
-      return oi >= 0 ? ((oldCard['sentence' + K] || [])[oi] || '') : '';
+      return oi >= 0 ? ((oldCard['sentence' + K] || [])[oi] || (K === 'Breakdowns' ? [] : '')) : (K === 'Breakdowns' ? [] : '');
     });
   });
   if(editingId){
@@ -2833,12 +2896,22 @@ function setStatus(msg, pct, warn){
   var barBox = el.buildBar.parentNode; if(barBox) barBox.hidden = !(pct > 0);   /* no empty track or blank line until there is something to show */
 }
 function pickStr(x){ return (typeof x === 'string') ? x.trim() : ''; }
+/* Word-by-word breakdown of a sentence: [{word, reading, meaning}, ...]. Anything malformed is dropped. */
+function normBreakdown(b){
+  if(!Array.isArray(b)) return [];
+  return b.map(function(it){
+    if(!it || typeof it !== 'object') return null;
+    var w = pickStr(it.word || it.term || it.text);
+    return w ? {word:w, reading:pickStr(it.reading || it.kana || it.rom || it.romanization), meaning:pickStr(it.meaning || it.def || it.definition || it.gloss || it.en)} : null;
+  }).filter(Boolean);
+}
 function normEx(e){
-  if(typeof e === 'string'){ e = e.trim(); return e ? {text:e, en:'', zh:'', reading:'', rom:''} : null; }
+  if(typeof e === 'string'){ e = e.trim(); return e ? {text:e, en:'', zh:'', reading:'', rom:'', breakdown:[]} : null; }
   if(e && typeof e === 'object'){
     var t = pickStr(e.text || e.sentence || e.target || e.ja || e.jp || e.ko);
     return t ? {text:t, en:pickStr(e.en || e.def_en || e.translation || e.english), zh:pickStr(e.zh || e.def_zh || e.zh_tw || e.translationZh || e.zhTW || e.chinese || e.tc),
-      reading:pickStr(e.reading || e.sentenceReading || e.kana || e.furigana), rom:pickStr(e.rom || e.romanization || e.sentenceRom || e.romaja)} : null;
+      reading:pickStr(e.reading || e.sentenceReading || e.kana || e.furigana), rom:pickStr(e.rom || e.romanization || e.sentenceRom || e.romaja),
+      breakdown:normBreakdown(e.breakdown || e.sentenceBreakdown)} : null;
   }
   return null;
 }
@@ -2847,14 +2920,16 @@ function normalizeObj(x){
   var ex = x.examples || x.sentences || x.example || [];
   if(!Array.isArray(ex)) ex = [ex];
   if(!ex.length && (x.sentence || x.sentence2)){          /* flat form: sentence/sentence2 with sentenceReading, sentenceRom, sentenceEn, sentenceZh ... */
-    ['sentence', 'sentence2'].forEach(function(k){
+    ['sentence', 'sentence2'].forEach(function(k, idx){
       if(!x[k]) return;
+      var bdKey = idx === 0 ? 'sentenceBreakdown' : 'sentence2Breakdown';
       ex.push({
         text: pickStr(x[k]),
         reading: pickStr(x[k + 'Reading']),
         rom: pickStr(x[k + 'Rom']),
         en: pickStr(x[k + 'Meaning'] || x[k + 'En'] || x[k + 'Translation'] || x[k + 'MeaningEn']),
-        zh: pickStr(x[k + 'MeaningZh'] || x[k + 'Zh'] || x[k + 'TranslationZh'] || x[k + 'ZhTw'])
+        zh: pickStr(x[k + 'MeaningZh'] || x[k + 'Zh'] || x[k + 'TranslationZh'] || x[k + 'ZhTw']),
+        breakdown: Array.isArray(x[bdKey]) ? x[bdKey] : []
       });
     });
   }
@@ -2973,7 +3048,8 @@ function buildCard(item, useApi, api, deckLang){
     }
     return {id:uid(), word:item.word, reading:reading, lang:item.lang || '', phonetic:phon, pos:pos, definition:def, definitionZh:zhDef, zhAuto:zhAuto,
       sentences:picked.map(function(e){ return e.text; }), translations:picked.map(function(e){ return e.en || ''; }), translationsZh:picked.map(function(e){ return e.zh || ''; }),
-      sentenceReadings:picked.map(function(e){ return e.reading || ''; }), sentenceRoms:picked.map(function(e){ return e.rom || ''; }), auto:auto, sample:false};
+      sentenceReadings:picked.map(function(e){ return e.reading || ''; }), sentenceRoms:picked.map(function(e){ return e.rom || ''; }),
+      sentenceBreakdowns:picked.map(function(e){ return normBreakdown(e.breakdown); }), auto:auto, sample:false};
   });
 }
 
@@ -3147,6 +3223,12 @@ function renderPills(){
       var b = n.closest ? n.closest('button') : null;
       if(b) b.setAttribute('aria-label', LANG_META[k].name + ': ' + fmtN(t[k]) + ' words. Open expedition map');
     }
+    var tg = $('#target-' + k), done = (state.dailyProgress && state.dailyProgress[k] && state.dailyProgress[k].reviewsToday) || 0, goal = reviewTarget(k);
+    if(tg){
+      tg.textContent = done + '/' + goal;
+      var tb = tg.closest ? tg.closest('button') : null;
+      if(tb){ tb.setAttribute('aria-label', LANG_META[k].name + ': ' + done + ' of ' + goal + ' daily reviews. Set goals'); if(tb.classList) tb.classList.toggle('goal-met', done >= goal); }
+    }
     var h = $('#hrs-' + k), hv = (state.lifetimeHours && state.lifetimeHours[k]) || 0;
     if(h){
       h.textContent = fmtHrs(hv) + 'h';
@@ -3158,7 +3240,7 @@ function renderPills(){
 }
 /* ---------- header carousel: Vocabulary mastered <-> input Hours ---------- */
 var topMode = 0;
-try{ topMode = localStorage.getItem('wordstack.topMode') === '1' ? 1 : 0; }catch(e){}
+try{ topMode = Math.max(0, Math.min(2, parseInt(localStorage.getItem('wordstack.topMode'), 10) || 0)); }catch(e){}
 function sizeTopCarousel(){          /* the header column is auto-sized, so give the carousel the width of its widest slide */
   try{
     var car = $('#topCarousel'); if(!car || !car.style) return;
@@ -3173,41 +3255,41 @@ function sizeTopCarousel(){          /* the header column is auto-sized, so give
   }catch(e){}
 }
 var topAnim = null;
+function topSlides(){ return [$('#slideVocab'), $('#slideHours'), $('#slideTarget')]; }
 function finishTopAnim(){
   if(!topAnim) return;
   var a = topAnim; topAnim = null; clearTimeout(a.t);
   var tr = a.track;
   tr.style.transition = 'none';
-  a.slides.forEach(function(sl){ sl.style.order = ''; });
+  a.slides.forEach(function(sl){ if(sl && sl.style) sl.style.order = ''; });
   tr.style.transform = 'translateX(' + (-100 * topMode) + '%)';
   void tr.offsetWidth;
   tr.style.transition = '';
 }
 function setTopMode(m, fromUser, dir){
-  m = m ? 1 : 0;
+  m = ((Math.round(m) % 3) + 3) % 3;
   var changed = m !== topMode, prev = topMode; topMode = m;
   var track = $('#topTrack');
   finishTopAnim();
-  var sv0 = $('#slideVocab'), sh0 = $('#slideHours');
+  var sl = topSlides();
   if(track && track.style){
-    if(changed && dir && !REDUCED && sv0 && sh0 && sv0.style && typeof track.offsetWidth === 'number'){
-      /* wrap-around: lay the incoming slide on the side the finger is dragging from, slide across, then restore natural order */
-      var from = prev ? sh0 : sv0, to = prev ? sv0 : sh0;
+    if(changed && dir && !REDUCED && sl[0] && sl[0].style && typeof track.offsetWidth === 'number'){
+      /* wrap-around: lay the outgoing and incoming slides side by side (on the side the finger drags from), slide across, then restore natural order */
+      var from = sl[prev], to = sl[m], other = sl[3 - prev - m] || null;
       track.style.transition = 'none';
       from.style.order = dir > 0 ? '0' : '1'; to.style.order = dir > 0 ? '1' : '0';
+      if(other && other.style) other.style.order = '2';
       track.style.transform = 'translateX(' + (dir > 0 ? 0 : -100) + '%)';
       void track.offsetWidth;
       track.style.transition = '';
       track.style.transform = 'translateX(' + (dir > 0 ? -100 : 0) + '%)';
-      topAnim = {track:track, slides:[sv0, sh0], t:setTimeout(finishTopAnim, 300)};
+      topAnim = {track:track, slides:sl, t:setTimeout(finishTopAnim, 300)};
     } else track.style.transform = 'translateX(' + (-100 * m) + '%)';
   }
-  var d0 = $('#dot0'), d1 = $('#dot1');
-  if(d0 && d0.classList) d0.classList.toggle('active', m === 0);
-  if(d1 && d1.classList) d1.classList.toggle('active', m === 1);
-  var sv = $('#slideVocab'), sh = $('#slideHours');
-  if(sv && sv.setAttribute) sv.setAttribute('aria-hidden', m === 0 ? 'false' : 'true');
-  if(sh && sh.setAttribute) sh.setAttribute('aria-hidden', m === 1 ? 'false' : 'true');
+  for(var q = 0; q < 3; q++){
+    var d = $('#dot' + q); if(d && d.classList) d.classList.toggle('active', m === q);
+    if(sl[q] && sl[q].setAttribute) sl[q].setAttribute('aria-hidden', m === q ? 'false' : 'true');
+  }
   if(changed){
     try{ localStorage.setItem('wordstack.topMode', String(m)); }catch(e){}
     if(fromUser) triggerHaptic(8);
@@ -3225,7 +3307,7 @@ function setTopMode(m, fromUser, dir){
     var dx = e.clientX - g.x, dy = e.clientY - g.y;
     if(Math.abs(dx) > 25 && Math.abs(dx) > Math.abs(dy) * 1.2){
       g.done = true; swipedAt = Date.now();
-      setTopMode(1 - topMode, true, dx < 0 ? 1 : -1);          /* either direction wraps: left = next slide, right = previous slide */
+      setTopMode(topMode + (dx < 0 ? 1 : 2), true, dx < 0 ? 1 : -1);          /* either direction wraps: left = next slide, right = previous slide (3 slides, endless) */
     }
   });
   function end(e){ if(g && (!e || e.pointerId === g.id)) g = null; }
@@ -3235,12 +3317,44 @@ function setTopMode(m, fromUser, dir){
   /* keyboard / screen-reader focus on a pill in the hidden slide brings that slide into view */
   car.addEventListener('focusin', function(e){
     var sl = e.target.closest && e.target.closest('.top-slide');
-    if(sl) setTopMode(sl.getAttribute('data-mode') === 'hours' ? 1 : 0, false);
+    if(sl){ var dm = sl.getAttribute('data-mode'); setTopMode(dm === 'target' ? 2 : dm === 'hours' ? 1 : 0, false); }
     car.scrollLeft = 0;
   });
   setTopMode(topMode, false);
   window.addEventListener('resize', sizeTopCarousel);
 })();
+var goalDraft = null;
+function renderGoalRows(){
+  el.goalRows.innerHTML = ALTAR_LANGS.slice().sort(function(a, b){ return LANG_ORDER.indexOf(a) - LANG_ORDER.indexOf(b); }).map(function(k){
+    var v = goalDraft[k], m = LANG_META[k];
+    return '<div class="goal-row" data-lang="' + k + '"><div class="gl"><span class="fl" aria-hidden="true">' + m.flag + '</span><span>' + m.name + '<small>cards per day</small></span></div>' +
+      '<div class="goal-step"><button type="button" class="icon-btn" data-action="goal-step" data-lang="' + k + '" data-d="-5" aria-label="Fewer ' + m.name + ' reviews"' + (v <= 5 ? ' disabled' : '') + '>' + icon('minus', 20) + '</button>' +
+      '<output aria-live="polite">' + v + '</output>' +
+      '<button type="button" class="icon-btn" data-action="goal-step" data-lang="' + k + '" data-d="5" aria-label="More ' + m.name + ' reviews"' + (v >= 500 ? ' disabled' : '') + '>' + icon('plus', 20) + '</button></div></div>';
+  }).join('');
+}
+function openGoalModal(){
+  lastFocus = document.activeElement;
+  goalDraft = {}; ALTAR_LANGS.forEach(function(k){ goalDraft[k] = reviewTarget(k); });
+  renderGoalRows();
+  showSheet(el.goalSheet);
+}
+function stepGoal(k, d){
+  if(!goalDraft || goalDraft[k] === undefined) return;
+  goalDraft[k] = Math.max(5, Math.min(500, goalDraft[k] + d));
+  renderGoalRows();
+}
+function saveGoals(){
+  if(!goalDraft) return;
+  ALTAR_LANGS.forEach(function(k){ state.reviewTargets[k] = goalDraft[k]; });
+  state.reviewTargetsAt = Date.now();
+  goalDraft = null;
+  save();
+  triggerHaptic(12);
+  closeAnySheet();
+  afterTracking(false);          /* a lower goal can complete today's vocabulary step; also refreshes the header pills */
+  toast('Daily goals saved', 1600);
+}
 function renderExpedition(){
   renderPills();
   if(!el.mapSheet.hidden) renderMap(false);
@@ -3507,7 +3621,8 @@ function evaluateDay(silent){
   if(rolloverDay()){ res.dirty = true; lastLit = {}; }
   ALTAR_LANGS.forEach(function(k){
     var p = state.dailyProgress[k];
-    if(!p.deckDone && dueCountLang(k) === 0){ p.deckDone = true; res.dirty = true; }
+    /* Daily vocabulary goal: hit the review target, or clear everything that was due after reviewing at least once. Once true it stays true until midnight. */
+    if(!p.deckDone && ((p.reviewsToday || 0) >= reviewTarget(k) || (dueCountLang(k) === 0 && (p.reviewsToday || 0) > 0))){ p.deckDone = true; res.dirty = true; }
   });
   recalcLifetime();
   ALTAR_LANGS.forEach(function(k){
@@ -3616,7 +3731,7 @@ var RING_R = 62, RING_C = 2 * Math.PI * RING_R, SURGE_MS = 720;
 function ringOffset(f){ return RING_C * (1 - f); }
 function portalHtml(k){
   var m = ALT_META[k], p = state.dailyProgress[k], tm = targetMin(k), cur = p.inputMinutes, due = dueCountLang(k);
-  var inOk = inputDone(k), vocOk = p.deckDone && due === 0, outOk = p.outputDone, on = isLit(k);
+  var inOk = inputDone(k), vocOk = !!p.deckDone, outOk = p.outputDone, on = isLit(k);
   var max = mercMax(k); portal.max = max;
   if(tm > 0 && cur > tm) cur = tm;   /* legacy values above the goal display as exactly the goal */
   var merc = '<div class="merc' + (inOk ? ' met' : '') + '" id="merc" role="slider" tabindex="0" aria-orientation="vertical" aria-label="Immersion time today" aria-valuemin="0" aria-valuemax="' + max + '" aria-valuenow="' + cur +
@@ -4015,6 +4130,9 @@ document.addEventListener('click', function(e){
       if(armed === id) deleteCard(manageDeckId, id); else { arm(id); renderManage(); }
       break;
     case 'close-sheet': closeAnySheet(); break;
+    case 'open-goal-modal': openGoalModal(); break;
+    case 'goal-step': stepGoal(t.getAttribute('data-lang'), Number(t.getAttribute('data-d'))); break;
+    case 'goal-save': saveGoals(); break;
     case 'sheet-delete':
       if(armed === 'sheet'){ var cid = editingId, dk = editDeckId; closeAnySheet(); deleteCard(dk, cid); }
       else { arm('sheet'); updateSheetDelete(); }
