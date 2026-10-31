@@ -1508,6 +1508,7 @@ function normalizeState(){
   state.streak.completedDates = state.streak.completedDates.filter(function(x, i, a){ return DATE_RE.test(x) && a.indexOf(x) === i; }).sort();
   if(!state.daily || !DATE_RE.test(state.daily.date || '') || !Array.isArray(state.daily.ids)) state.daily = {date:null, ids:[]};
   delete state.baselines;                                          /* retired: the expedition now counts mastered cards only */
+  if(!state.deleted || typeof state.deleted !== 'object' || Array.isArray(state.deleted)) state.deleted = {};
   normalizeTracking();
   /* Sync bookkeeping, local only: localRev = time of the last local data change, syncedRev = the localRev last confirmed in the cloud,
      remoteMs = server time of the newest cloud copy this device has seen, uid = the cloud account these numbers refer to. */
@@ -1522,8 +1523,15 @@ function normalizeState(){
   }
 }
 normalizeState();
+/* Tombstones: id -> time of deletion. A card or deck only disappears during a cloud merge when a tombstone says so. */
+function tomb(ids){
+  if(!state.deleted) state.deleted = {};
+  var t = Date.now(); [].concat(ids).forEach(function(id){ if(id) state.deleted[id] = t; });
+  var keys = Object.keys(state.deleted);
+  if(keys.length > 3000){ keys.sort(function(a, b){ return state.deleted[a] - state.deleted[b]; }).slice(0, keys.length - 3000).forEach(function(k){ delete state.deleted[k]; }); }
+}
 function syncSig(){
-  return JSON.stringify([state.decks.map(function(d){ return {id:d.id, name:d.name, lang:d.lang, createdAt:d.createdAt, cards:d.cards}; }), state.streak, state.daily, state.dailyTargets, state.lifetimeBase, state.dailyProgress, state.reviewTargets]);
+  return JSON.stringify([state.decks.map(function(d){ return {id:d.id, name:d.name, lang:d.lang, createdAt:d.createdAt, cards:d.cards}; }), state.streak, state.daily, state.dailyTargets, state.lifetimeBase, state.dailyProgress, state.reviewTargets, state.deleted]);
 }
 var lastSig = syncSig();
 var SYNC_DEBOUNCE = 1500, CFG_KEY = 'wordstack.fbconfig', DEV_KEY = 'wordstack.device';
@@ -1590,6 +1598,7 @@ function createDeck(name, lang){ var d = makeDeck(name, [], lang); state.decks.p
 function removeDeck(id){
   var i = state.decks.findIndex(function(d){ return d.id === id; });
   if(i < 0) return;
+  tomb([id].concat((state.decks[i].cards || []).map(function(c){ return c.id; })));
   state.decks.splice(i, 1);
   /* Any deck (including the active one) can be deleted. The active pointer moves to a neighbour, or to null when none are left. */
   if(!deckById(state.activeDeckId)){
@@ -2127,7 +2136,7 @@ function reconcile(snap){
 }
 function cardStamp(c){
   var r = (c.dueDate && c.interval >= 0) ? Date.parse(c.dueDate) - c.interval * DAY : 0;   /* dueDate minus interval = when it was last reviewed */
-  return Math.max(c.updatedAt || 0, isNaN(r) ? 0 : r);
+  return Math.max(c.updatedAt || 0, c.createdAt || 0, isNaN(r) ? 0 : r);
 }
 function mergeStreaks(a, b){
   var set = {};
@@ -2163,8 +2172,8 @@ function mergeProgress(l, r){
   var o = {date:l.date};
   ALTAR_LANGS.forEach(function(k){
     var a = l[k] || {}, c = r[k] || {}, ai = a.inAt || 0, ci = c.inAt || 0, ao = a.outAt || 0, co = c.outAt || 0;
-    var inNew = ci > ai || (ci === ai && (c.inputMinutes || 0) > (a.inputMinutes || 0));
-    o[k] = {inputMinutes:(inNew ? c : a).inputMinutes || 0, inAt:Math.max(ai, ci),
+    var inNew = ci > ai;
+    o[k] = {inputMinutes:Math.max(a.inputMinutes || 0, c.inputMinutes || 0), inAt:inNew ? ci : ai,
             outputDone:co === ao ? !!(a.outputDone || c.outputDone) : (co > ao ? !!c.outputDone : !!a.outputDone), outAt:Math.max(ao, co),
             deckDone:!!(a.deckDone || c.deckDone), reviewsToday:Math.max(a.reviewsToday || 0, c.reviewsToday || 0)};
   });
@@ -2178,25 +2187,31 @@ function pickReviewTargets(L, R){
   if(!rt) return {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
   return (Number(R.reviewTargetsAt) || 0) > (Number(L.reviewTargetsAt) || 0) ? {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0} : {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
 }
+function mergeDeleted(a, b){
+  var o = {}; [a, b].forEach(function(m){ if(m && typeof m === 'object') Object.keys(m).forEach(function(k){ o[k] = Math.max(o[k] || 0, Number(m[k]) || 1); }); });
+  return o;
+}
 function mergeData(L, R){
-  var decks = clone(L.decks), byId = {}, byName = {};
+  var del = mergeDeleted(L.deleted, R.deleted);
+  var decks = clone(L.decks).filter(function(d){ return !del[d.id]; }), byId = {}, byName = {};
   decks.forEach(function(d){ byId[d.id] = d; byName[(d.name || '').trim().toLowerCase()] = d; });
-  clone(R.decks).forEach(function(rd){
+  clone(R.decks).filter(function(d){ return !del[d.id]; }).forEach(function(rd){
     var ld = byId[rd.id], byWord = false;
     if(!ld){ ld = byName[(rd.name || '').trim().toLowerCase()]; byWord = !!ld; }   /* same-named deck created separately: match cards by word */
     if(!ld){ decks.push(rd); byId[rd.id] = rd; byName[(rd.name || '').trim().toLowerCase()] = rd; return; }
     var key = function(c){ return byWord ? String(c.word || '').toLowerCase() : c.id; }, cm = {};
     ld.cards.forEach(function(c){ cm[key(c)] = c; });
     (rd.cards || []).forEach(function(rc){
+      if(del[rc.id]) return;
       var lc = cm[key(rc)];
       if(!lc){ ld.cards.push(rc); cm[key(rc)] = rc; }
       else if(cardStamp(rc) > cardStamp(lc)){ ld.cards[ld.cards.indexOf(lc)] = rc; cm[key(rc)] = rc; }
     });
   });
-  decks.forEach(function(d){ if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
+  decks.forEach(function(d){ d.cards = d.cards.filter(function(c){ return !del[c.id]; }); if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
   var rtNew = pickReviewTargets(L, R) || {reviewTargets:null, reviewTargetsAt:0};
   var tracking = {dailyTargets:mergeTargets(L.dailyTargets, R.dailyTargets), lifetimeBase:mergeBase(L.lifetimeBase, R.lifetimeBase), dailyProgress:mergeProgress(L.dailyProgress, R.dailyProgress)};
-  return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
+  return {decks:decks, deleted:del, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
           reviewTargets:rtNew.reviewTargets ? clone(rtNew.reviewTargets) : null, reviewTargetsAt:rtNew.reviewTargetsAt || 0};
 }
 function applyRemote(data, rms, merge){
@@ -2204,16 +2219,24 @@ function applyRemote(data, rms, merge){
   var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null,
                                     dailyTargets:data.dailyTargets ? clone(data.dailyTargets) : null, lifetimeBase:data.lifetimeBase ? clone(data.lifetimeBase) : null,
                   dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null,
-                  reviewTargets:data.reviewTargets ? clone(data.reviewTargets) : null, reviewTargetsAt:Number(data.reviewTargetsAt) || 0};
+                  reviewTargets:data.reviewTargets ? clone(data.reviewTargets) : null, reviewTargetsAt:Number(data.reviewTargetsAt) || 0,
+                  deleted:data.deleted && typeof data.deleted === 'object' ? clone(data.deleted) : {}};
+  var needPush = !!merge;
   cloud.applying = true;
   try{
-    var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress, reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, incoming) : incoming;
+    /* Always a union, never a replace: a cloud snapshot can be older than what this device just did (a card added or a review done a moment ago). */
+    var out = mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress, reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt, deleted:state.deleted}, incoming);
+    if(!needPush){
+      var oldIds = {}; incoming.decks.forEach(function(d){ d.cards.forEach(function(c){ oldIds[c.id] = 1; }); });
+      needPush = out.decks.some(function(d){ return d.cards.some(function(c){ return !oldIds[c.id]; }); }) || (out.dailyProgress && incoming.dailyProgress && JSON.stringify(out.dailyProgress) !== JSON.stringify(incoming.dailyProgress));
+    }
     if(out.decks.length) state.decks = out.decks;
+    state.deleted = out.deleted;
     state.streak = out.streak; state.daily = out.daily;
     if(out.dailyTargets) state.dailyTargets = out.dailyTargets;
     if(out.lifetimeBase) state.lifetimeBase = out.lifetimeBase;
-    if(out.dailyProgress) state.dailyProgress = merge ? out.dailyProgress : mergeProgress(state.dailyProgress, out.dailyProgress);   /* a fresh snapshot never rolls back today's local progress */
-    var rtOut = merge ? out : pickReviewTargets({reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, out);
+    if(out.dailyProgress) state.dailyProgress = out.dailyProgress;   /* reviewsToday / inputMinutes = max, deckDone = OR: a snapshot never rolls back today's local progress */
+    var rtOut = out;
     if(rtOut && rtOut.reviewTargets){
       state.reviewTargets = rtOut.reviewTargets;
       state.reviewTargetsAt = rtOut.reviewTargetsAt || 0;
@@ -2222,14 +2245,14 @@ function applyRemote(data, rms, merge){
     }
     normalizeState();
     state.meta.remoteMs = rms;
-    if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
+    if(needPush) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
     else state.meta.syncedRev = state.meta.localRev;
     lastSig = syncSig();
     persist();
     sess = null; flipped = false;
     renderAll();
   } finally { cloud.applying = false; }
-  if(merge) pushNow(); else markSynced();
+  if(needPush) pushNow(); else markSynced();
 }
 
 /* writes: debounced, silent on failure, never blocks the UI */
@@ -2237,7 +2260,7 @@ function syncPayload(){
   return {decks:clone(state.decks),
           stats:{streakCount:state.streak.streakCount, lastStudiedDate:state.streak.lastStudiedDate, completedDates:state.streak.completedDates.slice(), daily:clone(state.daily)},
           dailyTargets:clone(state.dailyTargets), lifetimeHours:clone(state.lifetimeHours), lifetimeBase:clone(state.lifetimeBase), dailyProgress:clone(state.dailyProgress),
-          reviewTargets:clone(state.reviewTargets), reviewTargetsAt:state.reviewTargetsAt || 0};
+          reviewTargets:clone(state.reviewTargets), reviewTargetsAt:state.reviewTargetsAt || 0, deleted:clone(state.deleted || {})};
 }
 function scheduleSync(){
   if(cloud.applying || !cloud.ref) return;
@@ -2830,6 +2853,7 @@ function deleteCard(deckId, id){
   var d = deckById(deckId); if(!d) return;
   var i = d.cards.findIndex(function(c){ return c.id === id; });
   if(i < 0) return;
+  tomb(id);
   d.cards.splice(i, 1);
   if(d.index >= d.cards.length) d.index = Math.max(0, d.cards.length - 1);
   disarm(); save(); renderAll(); toast('Card deleted');
@@ -3084,7 +3108,7 @@ function buildCard(item, useApi, api, deckLang){
         if(picked.length < 2 && !seen[e.text.toLowerCase()]){ seen[e.text.toLowerCase()] = 1; picked.push(e); }
       });
     }
-    return {id:uid(), word:item.word, reading:reading, lang:item.lang || '', phonetic:phon, pos:pos, definition:def, definitionZh:zhDef, zhAuto:zhAuto,
+    return {id:uid(), createdAt:Date.now(), word:item.word, reading:reading, lang:item.lang || '', phonetic:phon, pos:pos, definition:def, definitionZh:zhDef, zhAuto:zhAuto,
       sentences:picked.map(function(e){ return e.text; }), translations:picked.map(function(e){ return e.en || ''; }), translationsZh:picked.map(function(e){ return e.zh || ''; }),
       sentenceReadings:picked.map(function(e){ return e.reading || ''; }), sentenceRoms:picked.map(function(e){ return e.rom || ''; }),
       sentenceBreakdowns:picked.map(function(e){ return normBreakdown(e.breakdown); }), auto:auto, sample:false};
@@ -3155,6 +3179,7 @@ function processWords(){
       var start = d.cards.length;
       d.cards = d.cards.concat(made); d.index = start;
       setActive(d.id); renderAll();
+      flushSync(); if(state.meta.localRev > state.meta.syncedRev) pushNow();   /* new cards go to the cloud right away */
       parts.push('Added ' + made.length + (made.length === 1 ? ' card' : ' cards') + ' to “' + d.name + '”');
       if(created){ el.newDeckName.value = ''; triggerHaptic([10, 40, 18]); }
     } else parts.push('No new cards');
@@ -4458,6 +4483,7 @@ el.newBtn.addEventListener('click', function(){ if(manageDeckId) openEditor(mana
 el.clearBtn.addEventListener('click', function(){
   var md = deckById(manageDeckId); if(!md || !md.cards.length) return;
   if(armed === 'clear'){
+    tomb(md.cards.map(function(c){ return c.id; }));
     md.cards = []; md.index = 0; if(md.id === state.activeDeckId) flipped = false;
     disarm(); save(); renderAll(); toast('Deck cleared');
   } else { arm('clear'); renderManage(); }
