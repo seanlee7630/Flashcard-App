@@ -2170,6 +2170,14 @@ function mergeProgress(l, r){
   });
   return o;
 }
+/* Review goals: a side without goals never wipes the other; when both have them the newer reviewTargetsAt wins (ties keep the local copy). */
+function pickReviewTargets(L, R){
+  var lt = L && L.reviewTargets, rt = R && R.reviewTargets;
+  if(!lt && !rt) return null;
+  if(!lt) return {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0};
+  if(!rt) return {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
+  return (Number(R.reviewTargetsAt) || 0) > (Number(L.reviewTargetsAt) || 0) ? {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0} : {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
+}
 function mergeData(L, R){
   var decks = clone(L.decks), byId = {}, byName = {};
   decks.forEach(function(d){ byId[d.id] = d; byName[(d.name || '').trim().toLowerCase()] = d; });
@@ -2186,7 +2194,7 @@ function mergeData(L, R){
     });
   });
   decks.forEach(function(d){ if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
-  var rtNew = (R.reviewTargets && (R.reviewTargetsAt || 0) > (L.reviewTargetsAt || 0)) ? R : L;
+  var rtNew = pickReviewTargets(L, R) || {reviewTargets:null, reviewTargetsAt:0};
   var tracking = {dailyTargets:mergeTargets(L.dailyTargets, R.dailyTargets), lifetimeBase:mergeBase(L.lifetimeBase, R.lifetimeBase), dailyProgress:mergeProgress(L.dailyProgress, R.dailyProgress)};
   return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
           reviewTargets:rtNew.reviewTargets ? clone(rtNew.reviewTargets) : null, reviewTargetsAt:rtNew.reviewTargetsAt || 0};
@@ -2204,8 +2212,14 @@ function applyRemote(data, rms, merge){
     state.streak = out.streak; state.daily = out.daily;
     if(out.dailyTargets) state.dailyTargets = out.dailyTargets;
     if(out.lifetimeBase) state.lifetimeBase = out.lifetimeBase;
-    if(out.dailyProgress) state.dailyProgress = out.dailyProgress;
-    if(out.reviewTargets){ state.reviewTargets = out.reviewTargets; state.reviewTargetsAt = out.reviewTargetsAt || 0; }
+    if(out.dailyProgress) state.dailyProgress = merge ? out.dailyProgress : mergeProgress(state.dailyProgress, out.dailyProgress);   /* a fresh snapshot never rolls back today's local progress */
+    var rtOut = merge ? out : pickReviewTargets({reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, out);
+    if(rtOut && rtOut.reviewTargets){
+      state.reviewTargets = rtOut.reviewTargets;
+      state.reviewTargetsAt = rtOut.reviewTargetsAt || 0;
+    } else if(!state.reviewTargets){
+      state.reviewTargets = {ja:20, ko:20, en:20};          /* a cloud document without goals never clears local ones */
+    }
     normalizeState();
     state.meta.remoteMs = rms;
     if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
@@ -3395,6 +3409,7 @@ function saveGoals(){
   state.reviewTargetsAt = Date.now();
   goalDraft = null;
   save();
+  flushSync();                   /* commit the new goals to the cloud right away */
   triggerHaptic(12);
   closeAnySheet();
   afterTracking(false);          /* a lower goal can complete today's vocabulary step: re-evaluates the day (flames, streak) */
@@ -4243,6 +4258,7 @@ function saveTarget(){
   el.targetSheet.hidden = true;
   toast(ALT_META[k].name + ' target: ' + fmtHrs(tgt.min / 60) + ' hrs a day');
   afterTracking(false);
+  flushSync();
   if(!el.portal.hidden){ try{ $('#portalTargetBtn').focus(); }catch(e){} }
 }
 el.targetSheet.addEventListener('click', function(e){ if(e.target === el.targetSheet) closeTargetSheet(); });
