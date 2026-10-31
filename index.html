@@ -348,6 +348,10 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
 .meta{padding:4px 8px;font-size:10px}
 .row-def{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row-actions{display:flex;gap:2px;flex:none}
+.back-foot{margin-bottom:32px;padding-bottom:env(safe-area-inset-bottom,24px)}
+.back-bottom{width:100%;min-height:52px;border-radius:999px;font-weight:600;letter-spacing:.02em}
+.back-bottom:hover{border-color:var(--ti);background:rgba(255,255,255,.04)}
+.back-bottom:active{background:rgba(255,255,255,.08)}
 .zone{display:flex;flex-direction:column;gap:10px;padding-top:6px}
 #exportBox{min-height:140px;font-family:var(--font-mono);font-size:13px}
 
@@ -936,6 +940,7 @@ service cloud.firestore {
           <textarea id="exportBox" readonly hidden aria-label="Deck JSON"></textarea>
           <button class="btn danger" id="clearBtn"><span data-icon="trash"></span><span id="clearLabel">Clear deck</span></button>
         </div>
+        <div class="back-foot"><button class="btn ghost back-bottom" data-action="back-decks" aria-label="Back to all decks"><span data-icon="left"></span>Back to Decks</button></div>
       </div>
     </section>
   </main>
@@ -1169,6 +1174,8 @@ var HX_IOS = (function(){
 var hxLastBuzz = 0;
 function triggerHaptic(pattern){
   if(pattern === undefined) pattern = 12;
+  if(pattern === 'light') pattern = 8;
+  else if(typeof pattern === 'string') pattern = 12;
   if(HX_IOS) return;
   if(typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
   var now = Date.now();
@@ -4381,7 +4388,7 @@ document.addEventListener('click', function(e){
     case 'study-deck': showTab('study'); break;
     case 'deck-portal': showTab('altar'); openPortal(t, t.getAttribute('data-lang')); break;
     case 'open-deck': if(did){ manageDeckId = did; disarm(); renderManage(); } break;
-    case 'back-decks': manageDeckId = null; disarm(); renderManage(); break;
+    case 'back-decks': triggerHaptic('light'); manageDeckId = null; disarm(); renderManage(); try{ var scr = document.querySelector('.screen.active') || document.querySelector('.screen:not([hidden])'); if(scr) scr.scrollTop = 0; window.scrollTo(0,0); }catch(_){} break;
     case 'delete-deck':
       if(!did) break;
       if(Date.now() - delDoneAt < 700) break;          /* the release that ends a completed hold */
