@@ -2124,9 +2124,13 @@ function reconcile(snap){
     return;
   }
   var rms = remoteMillis(data);
-  if(data.writer === DEVICE && (data.rev === m.syncedRev || data.rev === cloud.inflightRev)){
-    m.remoteMs = Math.max(m.remoteMs, rms); persist();
-    if(!cloud.pushing){ if(m.localRev > m.syncedRev) pushNow(); else markSynced(); }
+  if(data.writer === DEVICE){
+    /* our own write coming back: never an external change, never merged or re-pushed because of it */
+    m.remoteMs = Math.max(m.remoteMs, rms);
+    m.syncedRev = Math.max(m.syncedRev, data.rev || 0);
+    persist();
+    if(m.localRev <= m.syncedRev){ markSynced(); return; }
+    if(!cloud.pushing) pushNow();
     return;
   }
   if(rms <= m.remoteMs){ if(dirty) pushNow(); else markSynced(); return; }
@@ -2206,12 +2210,21 @@ function mergeData(L, R){
   return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
           reviewTargets:rtNew.reviewTargets ? clone(rtNew.reviewTargets) : null, reviewTargetsAt:rtNew.reviewTargetsAt || 0};
 }
+/* order-insensitive comparison: does the merged result contain anything the remote snapshot does not? */
+function mergeSigOf(o){
+  var decks = (o.decks || []).map(function(d){ return {id:d.id, name:d.name, lang:d.lang, cards:(d.cards || []).slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; })}; }).sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+  var st = o.streak || {};
+  var pr = o.dailyProgress || {}, prog = {date:pr.date}; ALTAR_LANGS.forEach(function(k){ var x = pr[k] || {}; prog[k] = [x.inputMinutes || 0, !!x.deckDone, !!x.outputDone, x.reviewsToday || 0]; });
+  return JSON.stringify([decks, st.streakCount || 0, st.lastStudiedDate || null, (st.completedDates || []).slice().sort(), o.daily, prog, o.lifetimeBase || null, o.reviewTargets || null]);
+}
+function mergeAdds(out, incoming){ return mergeSigOf(out) !== mergeSigOf(incoming); }
 function applyRemote(data, rms, merge){
   var stats = data.stats || {};
   var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null,
                                     dailyTargets:data.dailyTargets ? clone(data.dailyTargets) : null, lifetimeBase:data.lifetimeBase ? clone(data.lifetimeBase) : null,
                   dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null,
                   reviewTargets:data.reviewTargets ? clone(data.reviewTargets) : null, reviewTargetsAt:Number(data.reviewTargetsAt) || 0};
+  var needPush = false;
   cloud.applying = true;
   try{
     var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress, reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, incoming) : incoming;
@@ -2229,14 +2242,16 @@ function applyRemote(data, rms, merge){
     }
     normalizeState();
     state.meta.remoteMs = rms;
-    if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
+    /* only push when local held something the cloud copy lacks; otherwise the revisions are simply aligned */
+    needPush = merge && mergeAdds(out, incoming);
+    if(needPush) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);
     else state.meta.syncedRev = state.meta.localRev;
     lastSig = syncSig();
     persist();
     sess = null; flipped = false;
     renderAll();
   } finally { cloud.applying = false; }
-  if(merge) pushNow(); else markSynced();
+  if(needPush) pushNow(); else markSynced();
 }
 
 /* writes: debounced, silent on failure, never blocks the UI */
@@ -2257,6 +2272,7 @@ function pushNow(){
   if(!cloud.ref || !cloud.user) return Promise.resolve();
   clearTimeout(cloud.timer); cloud.timer = null;
   if(cloud.pushing) return cloud.pushing.then(function(){ return state.meta.localRev > state.meta.syncedRev ? pushNow() : null; });
+  if(syncSig() === lastSig && state.meta.localRev <= state.meta.syncedRev){ markSynced(); return Promise.resolve(); }   /* nothing new to send */
   var rev = state.meta.localRev, payload = syncPayload();
   if(JSON.stringify(payload).length > 950000){ setCloud('offline', 'Your data is larger than one Firestore document allows (1 MiB). It is still saved on this device.'); return Promise.resolve(); }
   payload.rev = rev; payload.writer = DEVICE; payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
