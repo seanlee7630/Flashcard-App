@@ -348,10 +348,6 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
 .meta{padding:4px 8px;font-size:10px}
 .row-def{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row-actions{display:flex;gap:2px;flex:none}
-.back-foot{margin-bottom:32px;padding-bottom:env(safe-area-inset-bottom,24px)}
-.back-bottom{width:100%;min-height:52px;border-radius:999px;font-weight:600;letter-spacing:.02em}
-.back-bottom:hover{border-color:var(--ti);background:rgba(255,255,255,.04)}
-.back-bottom:active{background:rgba(255,255,255,.08)}
 .zone{display:flex;flex-direction:column;gap:10px;padding-top:6px}
 #exportBox{min-height:140px;font-family:var(--font-mono);font-size:13px}
 
@@ -940,7 +936,6 @@ service cloud.firestore {
           <textarea id="exportBox" readonly hidden aria-label="Deck JSON"></textarea>
           <button class="btn danger" id="clearBtn"><span data-icon="trash"></span><span id="clearLabel">Clear deck</span></button>
         </div>
-        <div class="back-foot"><button class="btn ghost back-bottom" data-action="back-decks" aria-label="Back to all decks"><span data-icon="left"></span>Back to Decks</button></div>
       </div>
     </section>
   </main>
@@ -1174,8 +1169,6 @@ var HX_IOS = (function(){
 var hxLastBuzz = 0;
 function triggerHaptic(pattern){
   if(pattern === undefined) pattern = 12;
-  if(pattern === 'light') pattern = 8;
-  else if(typeof pattern === 'string') pattern = 12;
   if(HX_IOS) return;
   if(typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
   var now = Date.now();
@@ -2124,13 +2117,9 @@ function reconcile(snap){
     return;
   }
   var rms = remoteMillis(data);
-  if(data.writer === DEVICE){
-    /* our own write coming back: never an external change, never merged or re-pushed because of it */
-    m.remoteMs = Math.max(m.remoteMs, rms);
-    m.syncedRev = Math.max(m.syncedRev, data.rev || 0);
-    persist();
-    if(m.localRev <= m.syncedRev){ markSynced(); return; }
-    if(!cloud.pushing) pushNow();
+  if(data.writer === DEVICE && (data.rev === m.syncedRev || data.rev === cloud.inflightRev)){
+    m.remoteMs = Math.max(m.remoteMs, rms); persist();
+    if(!cloud.pushing){ if(m.localRev > m.syncedRev) pushNow(); else markSynced(); }
     return;
   }
   if(rms <= m.remoteMs){ if(dirty) pushNow(); else markSynced(); return; }
@@ -2181,14 +2170,6 @@ function mergeProgress(l, r){
   });
   return o;
 }
-/* Review goals: a side without goals never wipes the other; when both have them the newer reviewTargetsAt wins (ties keep the local copy). */
-function pickReviewTargets(L, R){
-  var lt = L && L.reviewTargets, rt = R && R.reviewTargets;
-  if(!lt && !rt) return null;
-  if(!lt) return {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0};
-  if(!rt) return {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
-  return (Number(R.reviewTargetsAt) || 0) > (Number(L.reviewTargetsAt) || 0) ? {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0} : {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
-}
 function mergeData(L, R){
   var decks = clone(L.decks), byId = {}, byName = {};
   decks.forEach(function(d){ byId[d.id] = d; byName[(d.name || '').trim().toLowerCase()] = d; });
@@ -2205,26 +2186,17 @@ function mergeData(L, R){
     });
   });
   decks.forEach(function(d){ if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
-  var rtNew = pickReviewTargets(L, R) || {reviewTargets:null, reviewTargetsAt:0};
+  var rtNew = (R.reviewTargets && (R.reviewTargetsAt || 0) > (L.reviewTargetsAt || 0)) ? R : L;
   var tracking = {dailyTargets:mergeTargets(L.dailyTargets, R.dailyTargets), lifetimeBase:mergeBase(L.lifetimeBase, R.lifetimeBase), dailyProgress:mergeProgress(L.dailyProgress, R.dailyProgress)};
   return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
           reviewTargets:rtNew.reviewTargets ? clone(rtNew.reviewTargets) : null, reviewTargetsAt:rtNew.reviewTargetsAt || 0};
 }
-/* order-insensitive comparison: does the merged result contain anything the remote snapshot does not? */
-function mergeSigOf(o){
-  var decks = (o.decks || []).map(function(d){ return {id:d.id, name:d.name, lang:d.lang, cards:(d.cards || []).slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; })}; }).sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
-  var st = o.streak || {};
-  var pr = o.dailyProgress || {}, prog = {date:pr.date}; ALTAR_LANGS.forEach(function(k){ var x = pr[k] || {}; prog[k] = [x.inputMinutes || 0, !!x.deckDone, !!x.outputDone, x.reviewsToday || 0]; });
-  return JSON.stringify([decks, st.streakCount || 0, st.lastStudiedDate || null, (st.completedDates || []).slice().sort(), o.daily, prog, o.lifetimeBase || null, o.reviewTargets || null]);
-}
-function mergeAdds(out, incoming){ return mergeSigOf(out) !== mergeSigOf(incoming); }
 function applyRemote(data, rms, merge){
   var stats = data.stats || {};
   var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null,
                                     dailyTargets:data.dailyTargets ? clone(data.dailyTargets) : null, lifetimeBase:data.lifetimeBase ? clone(data.lifetimeBase) : null,
                   dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null,
                   reviewTargets:data.reviewTargets ? clone(data.reviewTargets) : null, reviewTargetsAt:Number(data.reviewTargetsAt) || 0};
-  var needPush = false;
   cloud.applying = true;
   try{
     var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress, reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, incoming) : incoming;
@@ -2232,26 +2204,18 @@ function applyRemote(data, rms, merge){
     state.streak = out.streak; state.daily = out.daily;
     if(out.dailyTargets) state.dailyTargets = out.dailyTargets;
     if(out.lifetimeBase) state.lifetimeBase = out.lifetimeBase;
-    if(out.dailyProgress) state.dailyProgress = merge ? out.dailyProgress : mergeProgress(state.dailyProgress, out.dailyProgress);   /* a fresh snapshot never rolls back today's local progress */
-    var rtOut = merge ? out : pickReviewTargets({reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, out);
-    if(rtOut && rtOut.reviewTargets){
-      state.reviewTargets = rtOut.reviewTargets;
-      state.reviewTargetsAt = rtOut.reviewTargetsAt || 0;
-    } else if(!state.reviewTargets){
-      state.reviewTargets = {ja:20, ko:20, en:20};          /* a cloud document without goals never clears local ones */
-    }
+    if(out.dailyProgress) state.dailyProgress = out.dailyProgress;
+    if(out.reviewTargets){ state.reviewTargets = out.reviewTargets; state.reviewTargetsAt = out.reviewTargetsAt || 0; }
     normalizeState();
     state.meta.remoteMs = rms;
-    /* only push when local held something the cloud copy lacks; otherwise the revisions are simply aligned */
-    needPush = merge && mergeAdds(out, incoming);
-    if(needPush) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);
+    if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
     else state.meta.syncedRev = state.meta.localRev;
     lastSig = syncSig();
     persist();
     sess = null; flipped = false;
     renderAll();
   } finally { cloud.applying = false; }
-  if(needPush) pushNow(); else markSynced();
+  if(merge) pushNow(); else markSynced();
 }
 
 /* writes: debounced, silent on failure, never blocks the UI */
@@ -2272,7 +2236,6 @@ function pushNow(){
   if(!cloud.ref || !cloud.user) return Promise.resolve();
   clearTimeout(cloud.timer); cloud.timer = null;
   if(cloud.pushing) return cloud.pushing.then(function(){ return state.meta.localRev > state.meta.syncedRev ? pushNow() : null; });
-  if(syncSig() === lastSig && state.meta.localRev <= state.meta.syncedRev){ markSynced(); return Promise.resolve(); }   /* nothing new to send */
   var rev = state.meta.localRev, payload = syncPayload();
   if(JSON.stringify(payload).length > 950000){ setCloud('offline', 'Your data is larger than one Firestore document allows (1 MiB). It is still saved on this device.'); return Promise.resolve(); }
   payload.rev = rev; payload.writer = DEVICE; payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -3432,7 +3395,6 @@ function saveGoals(){
   state.reviewTargetsAt = Date.now();
   goalDraft = null;
   save();
-  flushSync();                   /* commit the new goals to the cloud right away */
   triggerHaptic(12);
   closeAnySheet();
   afterTracking(false);          /* a lower goal can complete today's vocabulary step: re-evaluates the day (flames, streak) */
@@ -3451,7 +3413,7 @@ function nodeX(i, W){
   var amp = Math.min(W * 0.3, 118);
   return Math.round(W / 2 + amp * Math.sin(i * 1.12 + 0.35));
 }
-function mapHeight(){ return nodeY(mapTiers().length - 1) + 240; }     /* generous room under station 1 (label + YOU ARE HERE) */
+function mapHeight(){ return nodeY(mapTiers().length - 1) + 150; }
 
 /* ---------- retro 16-bit RPG backdrop: drawn once per size on a tiny canvas, scaled up with nearest-neighbour ----------
    Level 1 sits at the top of the map, so the world runs wasteland -> plains -> forest -> mountains -> dusk clouds -> deep space as you scroll down. */
@@ -3662,14 +3624,7 @@ function paintCityBg(W, H){
       set(lx, ly - 1, LP); set(lx + 1, ly - 1, LP); set(lx, ly - 2, LP); set(lx + 1, ly - 2, LP);
       [[-1, -1], [2, -1], [-1, -2], [2, -2], [0, -3], [1, -3], [0, 0], [1, 0]].forEach(function(o){ if(BAY[(ly + o[1]) & 3][(lx + o[0]) & 3] < 8) set(lx + o[0], ly + o[1], LH); });
     }
-    /* meadow floor: the moss simply deepens toward the bottom edge (no separate paving block), with a few grass tufts and pebbles */
-    var MG = [H2('#173a24'), H2('#12301d'), H2('#0f2718')], gy0 = R(.9);
-    for(y = gy0; y < ch; y++){ var gf = (y - gy0) / Math.max(1, ch - 1 - gy0) * 2, gi = Math.min(1, Math.floor(gf)), gr = gf - gi; for(x = 0; x < cw; x++) set(x, y, (gr * 16 > BAY[y & 3][x & 3] + .5) ? MG[gi + 1] : MG[gi]); }
-    for(i = 0; i < Math.round(cw * (ch - gy0) / 90); i++){
-      var gx = ri(1, cw - 2), gyy = ri(gy0, ch - 2);
-      if(rnd() < .6){ set(gx, gyy, H2('#2f6a3a')); set(gx, gyy - 1, H2('#2f6a3a')); set(gx + 1, gyy, H2('#245a30')); }
-      else { set(gx, gyy, H2('#4a4f58')); set(gx + 1, gyy, H2('#363a44')); }
-    }
+    for(y = R(.955); y < ch; y++) for(x = 0; x < cw; x++) set(x, y, ((x + (y & 1) * 2) % 5 < 4) ? ((x * 3 + y) % 7 === 0 ? H2('#6a6d78') : H2('#4a4d58')) : H2('#2a2c34'));
     for(i = 0; i < Math.round(cw / 10); i++) set(ri(0, cw - 1), ri(R(.8), R(.95)), H2('#d9ff7a'));
     ctx.putImageData(img, 0, 0); url = cv.toDataURL('image/png');
     ctx2.putImageData(img2, 0, 0); fl = cv2.toDataURL('image/png');
@@ -4288,7 +4243,6 @@ function saveTarget(){
   el.targetSheet.hidden = true;
   toast(ALT_META[k].name + ' target: ' + fmtHrs(tgt.min / 60) + ' hrs a day');
   afterTracking(false);
-  flushSync();
   if(!el.portal.hidden){ try{ $('#portalTargetBtn').focus(); }catch(e){} }
 }
 el.targetSheet.addEventListener('click', function(e){ if(e.target === el.targetSheet) closeTargetSheet(); });
@@ -4404,7 +4358,7 @@ document.addEventListener('click', function(e){
     case 'study-deck': showTab('study'); break;
     case 'deck-portal': showTab('altar'); openPortal(t, t.getAttribute('data-lang')); break;
     case 'open-deck': if(did){ manageDeckId = did; disarm(); renderManage(); } break;
-    case 'back-decks': triggerHaptic('light'); manageDeckId = null; disarm(); renderManage(); try{ var scr = document.querySelector('.screen.active') || document.querySelector('.screen:not([hidden])'); if(scr) scr.scrollTop = 0; window.scrollTo(0,0); }catch(_){} break;
+    case 'back-decks': manageDeckId = null; disarm(); renderManage(); break;
     case 'delete-deck':
       if(!did) break;
       if(Date.now() - delDoneAt < 700) break;          /* the release that ends a completed hold */
