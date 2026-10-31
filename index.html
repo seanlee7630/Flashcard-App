@@ -348,6 +348,10 @@ details.formats pre{margin:0 0 12px;overflow-x:auto;font-family:var(--font-mono)
 .meta{padding:4px 8px;font-size:10px}
 .row-def{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row-actions{display:flex;gap:2px;flex:none}
+.back-foot{margin-bottom:32px;padding-bottom:env(safe-area-inset-bottom,24px)}
+.back-bottom{width:100%;min-height:52px;border-radius:999px;font-weight:600;letter-spacing:.02em}
+.back-bottom:hover{border-color:var(--ti);background:rgba(255,255,255,.04)}
+.back-bottom:active{background:rgba(255,255,255,.08)}
 .zone{display:flex;flex-direction:column;gap:10px;padding-top:6px}
 #exportBox{min-height:140px;font-family:var(--font-mono);font-size:13px}
 
@@ -506,6 +510,30 @@ select{
   -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%)}
 .map-track{position:relative;width:100%;background-color:#0b0d24;background-size:6px 6px,6px 6px,100% 100%;background-repeat:repeat,repeat,no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated}
 .map-track::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px),radial-gradient(120% 60% at 50% 50%,transparent 55%,rgba(0,0,0,.35) 100%);z-index:0}
+.map-overlay.theme-twilight{
+  background:radial-gradient(circle at 50% 14%,rgba(56,189,248,.09),transparent 70%),linear-gradient(rgba(18,18,28,.97),rgba(10,10,16,.99)),repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.02) 3px 4px);
+  background-size:100% 100%,100% 100%,4px 4px;padding-top:env(safe-area-inset-top,0px)}
+.theme-twilight .map-head h2{text-shadow:2px 2px 0 #000}
+.theme-twilight .mtab{border-radius:6px;border:2px solid rgba(150,170,255,.22);background:rgba(10,12,30,.8);box-shadow:0 2px 0 #000}
+.theme-twilight .mtab.is-on{border-color:rgba(253,230,138,.8);background:rgba(40,34,80,.85);box-shadow:0 2px 0 #000,0 0 0 2px rgba(253,230,138,.12)}
+.theme-twilight .map-stats{text-shadow:1px 1px 0 #000}
+.theme-twilight .map-track{background-size:6px 6px,6px 6px,100% 100%}
+/* readability veil: dark rgba(10,12,20,.78) behind the trail and its labels, easing off toward the edges so the scenery stays visible; plus a fine 4px pixel grid */
+.theme-twilight .map-track::before{background:linear-gradient(90deg,rgba(10,12,20,.4) 0,rgba(10,12,20,.78) 24%,rgba(10,12,20,.78) 76%,rgba(10,12,20,.4) 100%),repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 1px,transparent 1px 4px)}
+.city-flicker{position:absolute;inset:0;background-size:100% 100%;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated;pointer-events:none;z-index:0;animation:cityflick 2.6s steps(1,end) infinite}
+@keyframes cityflick{0%{opacity:1}18%{opacity:.25}24%{opacity:1}57%{opacity:.5}63%{opacity:1}82%{opacity:.2}88%{opacity:.9}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.city-flicker{animation:none}}
+.theme-twilight .mpath-shadow{stroke:rgba(0,0,10,.75);stroke-width:10}
+.theme-twilight .mpath-base{stroke:rgba(200,214,255,.75)}
+.theme-twilight .mzone span{border-radius:4px;border:2px solid rgba(150,170,255,.3);background:rgba(8,10,26,.92);box-shadow:0 2px 0 #000}
+.theme-twilight .mnode::before{content:"";position:absolute;inset:-4px;border-radius:50%;pointer-events:none}
+.theme-twilight .mnode.is-cur::before{inset:-8px;box-shadow:0 0 0 6px rgba(252,211,77,.16),0 0 0 12px rgba(252,211,77,.09),0 0 0 18px rgba(252,211,77,.045)}
+.theme-twilight .mnode.is-done::before{box-shadow:0 0 0 6px rgba(125,211,252,.1),0 0 0 12px rgba(125,211,252,.05)}
+.theme-twilight .mnode.is-lock .disc{background:rgba(8,10,26,.85);border:2px dashed rgba(200,214,255,.3)}
+.theme-twilight .mlabel b{color:#fff}
+.theme-twilight .mnode.is-lock .mlabel b{color:#c8d1f0}
+.theme-twilight .mlabel small{color:#b4bfe6}
+.theme-twilight .inspect{border-radius:8px;border:2px solid rgba(150,170,255,.3);background:rgba(8,10,26,.96);box-shadow:0 0 0 2px #000,0 -10px 30px rgba(0,0,10,.6)}
 .mpath-shadow{fill:none;stroke:rgba(0,0,0,.6);stroke-width:8;stroke-linecap:round}
 .map-track svg{position:absolute;left:0;top:0;display:block;pointer-events:none}
 .mpath-base{fill:none;stroke:rgba(255,255,255,.55);stroke-width:3;stroke-dasharray:2 8;stroke-linecap:square}
@@ -716,9 +744,9 @@ select{
         </div>
         <!-- Slide 1: total input / immersion hours -->
         <div class="top-slide" id="slideHours" data-mode="hours">
-          <button class="pill-btn" data-action="open-portal" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="hrs-ja">0.0h</span></span></button>
-          <button class="pill-btn" data-action="open-portal" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="hrs-ko">0.0h</span></span></button>
-          <button class="pill-btn" data-action="open-portal" data-lang="en" aria-haspopup="dialog" aria-label="English: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="hrs-en">0.0h</span></span></button>
+          <button class="pill-btn" data-action="open-hours-map" data-lang="ja" aria-haspopup="dialog" aria-label="Japanese: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127471;&#127477;</span><span id="hrs-ja">0.0h</span></span></button>
+          <button class="pill-btn" data-action="open-hours-map" data-lang="ko" aria-haspopup="dialog" aria-label="Korean: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127472;&#127479;</span><span id="hrs-ko">0.0h</span></span></button>
+          <button class="pill-btn" data-action="open-hours-map" data-lang="en" aria-haspopup="dialog" aria-label="English: 0.0 hours"><span class="pill-in"><span class="fl" aria-hidden="true">&#127482;&#127480;</span><span id="hrs-en">0.0h</span></span></button>
         </div>
         <!-- Slide 2: daily review goal progress -->
         <div class="top-slide" id="slideTarget" data-mode="target">
@@ -912,6 +940,7 @@ service cloud.firestore {
           <textarea id="exportBox" readonly hidden aria-label="Deck JSON"></textarea>
           <button class="btn danger" id="clearBtn"><span data-icon="trash"></span><span id="clearLabel">Clear deck</span></button>
         </div>
+        <div class="back-foot"><button class="btn ghost back-bottom" data-action="back-decks" aria-label="Back to all decks"><span data-icon="left"></span>Back to Decks</button></div>
       </div>
     </section>
   </main>
@@ -1145,6 +1174,8 @@ var HX_IOS = (function(){
 var hxLastBuzz = 0;
 function triggerHaptic(pattern){
   if(pattern === undefined) pattern = 12;
+  if(pattern === 'light') pattern = 8;
+  else if(typeof pattern === 'string') pattern = 12;
   if(HX_IOS) return;
   if(typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
   var now = Date.now();
@@ -2093,9 +2124,13 @@ function reconcile(snap){
     return;
   }
   var rms = remoteMillis(data);
-  if(data.writer === DEVICE && (data.rev === m.syncedRev || data.rev === cloud.inflightRev)){
-    m.remoteMs = Math.max(m.remoteMs, rms); persist();
-    if(!cloud.pushing){ if(m.localRev > m.syncedRev) pushNow(); else markSynced(); }
+  if(data.writer === DEVICE){
+    /* our own write coming back: never an external change, never merged or re-pushed because of it */
+    m.remoteMs = Math.max(m.remoteMs, rms);
+    m.syncedRev = Math.max(m.syncedRev, data.rev || 0);
+    persist();
+    if(m.localRev <= m.syncedRev){ markSynced(); return; }
+    if(!cloud.pushing) pushNow();
     return;
   }
   if(rms <= m.remoteMs){ if(dirty) pushNow(); else markSynced(); return; }
@@ -2146,6 +2181,14 @@ function mergeProgress(l, r){
   });
   return o;
 }
+/* Review goals: a side without goals never wipes the other; when both have them the newer reviewTargetsAt wins (ties keep the local copy). */
+function pickReviewTargets(L, R){
+  var lt = L && L.reviewTargets, rt = R && R.reviewTargets;
+  if(!lt && !rt) return null;
+  if(!lt) return {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0};
+  if(!rt) return {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
+  return (Number(R.reviewTargetsAt) || 0) > (Number(L.reviewTargetsAt) || 0) ? {reviewTargets:clone(rt), reviewTargetsAt:Number(R.reviewTargetsAt) || 0} : {reviewTargets:clone(lt), reviewTargetsAt:Number(L.reviewTargetsAt) || 0};
+}
 function mergeData(L, R){
   var decks = clone(L.decks), byId = {}, byName = {};
   decks.forEach(function(d){ byId[d.id] = d; byName[(d.name || '').trim().toLowerCase()] = d; });
@@ -2162,17 +2205,26 @@ function mergeData(L, R){
     });
   });
   decks.forEach(function(d){ if(d.cards.some(function(c){ return !c.sample; })) d.cards = d.cards.filter(function(c){ return !c.sample; }); });
-  var rtNew = (R.reviewTargets && (R.reviewTargetsAt || 0) > (L.reviewTargetsAt || 0)) ? R : L;
+  var rtNew = pickReviewTargets(L, R) || {reviewTargets:null, reviewTargetsAt:0};
   var tracking = {dailyTargets:mergeTargets(L.dailyTargets, R.dailyTargets), lifetimeBase:mergeBase(L.lifetimeBase, R.lifetimeBase), dailyProgress:mergeProgress(L.dailyProgress, R.dailyProgress)};
   return {decks:decks, streak:mergeStreaks(L.streak, R.streak || {}), daily:mergeDaily(L.daily, R.daily), dailyTargets:tracking.dailyTargets, lifetimeBase:tracking.lifetimeBase, dailyProgress:tracking.dailyProgress,
           reviewTargets:rtNew.reviewTargets ? clone(rtNew.reviewTargets) : null, reviewTargetsAt:rtNew.reviewTargetsAt || 0};
 }
+/* order-insensitive comparison: does the merged result contain anything the remote snapshot does not? */
+function mergeSigOf(o){
+  var decks = (o.decks || []).map(function(d){ return {id:d.id, name:d.name, lang:d.lang, cards:(d.cards || []).slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; })}; }).sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+  var st = o.streak || {};
+  var pr = o.dailyProgress || {}, prog = {date:pr.date}; ALTAR_LANGS.forEach(function(k){ var x = pr[k] || {}; prog[k] = [x.inputMinutes || 0, !!x.deckDone, !!x.outputDone, x.reviewsToday || 0]; });
+  return JSON.stringify([decks, st.streakCount || 0, st.lastStudiedDate || null, (st.completedDates || []).slice().sort(), o.daily, prog, o.lifetimeBase || null, o.reviewTargets || null]);
+}
+function mergeAdds(out, incoming){ return mergeSigOf(out) !== mergeSigOf(incoming); }
 function applyRemote(data, rms, merge){
   var stats = data.stats || {};
   var incoming = {decks:clone(data.decks), streak:{streakCount:stats.streakCount, lastStudiedDate:stats.lastStudiedDate, completedDates:stats.completedDates}, daily:stats.daily ? clone(stats.daily) : null,
                                     dailyTargets:data.dailyTargets ? clone(data.dailyTargets) : null, lifetimeBase:data.lifetimeBase ? clone(data.lifetimeBase) : null,
                   dailyProgress:data.dailyProgress ? clone(data.dailyProgress) : null,
                   reviewTargets:data.reviewTargets ? clone(data.reviewTargets) : null, reviewTargetsAt:Number(data.reviewTargetsAt) || 0};
+  var needPush = false;
   cloud.applying = true;
   try{
     var out = merge ? mergeData({decks:state.decks, streak:state.streak, daily:state.daily, dailyTargets:state.dailyTargets, lifetimeBase:state.lifetimeBase, dailyProgress:state.dailyProgress, reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, incoming) : incoming;
@@ -2180,18 +2232,26 @@ function applyRemote(data, rms, merge){
     state.streak = out.streak; state.daily = out.daily;
     if(out.dailyTargets) state.dailyTargets = out.dailyTargets;
     if(out.lifetimeBase) state.lifetimeBase = out.lifetimeBase;
-    if(out.dailyProgress) state.dailyProgress = out.dailyProgress;
-    if(out.reviewTargets){ state.reviewTargets = out.reviewTargets; state.reviewTargetsAt = out.reviewTargetsAt || 0; }
+    if(out.dailyProgress) state.dailyProgress = merge ? out.dailyProgress : mergeProgress(state.dailyProgress, out.dailyProgress);   /* a fresh snapshot never rolls back today's local progress */
+    var rtOut = merge ? out : pickReviewTargets({reviewTargets:state.reviewTargets, reviewTargetsAt:state.reviewTargetsAt}, out);
+    if(rtOut && rtOut.reviewTargets){
+      state.reviewTargets = rtOut.reviewTargets;
+      state.reviewTargetsAt = rtOut.reviewTargetsAt || 0;
+    } else if(!state.reviewTargets){
+      state.reviewTargets = {ja:20, ko:20, en:20};          /* a cloud document without goals never clears local ones */
+    }
     normalizeState();
     state.meta.remoteMs = rms;
-    if(merge) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);   /* the merged result still has to go up */
+    /* only push when local held something the cloud copy lacks; otherwise the revisions are simply aligned */
+    needPush = merge && mergeAdds(out, incoming);
+    if(needPush) state.meta.localRev = Math.max(Date.now(), state.meta.localRev + 1);
     else state.meta.syncedRev = state.meta.localRev;
     lastSig = syncSig();
     persist();
     sess = null; flipped = false;
     renderAll();
   } finally { cloud.applying = false; }
-  if(merge) pushNow(); else markSynced();
+  if(needPush) pushNow(); else markSynced();
 }
 
 /* writes: debounced, silent on failure, never blocks the UI */
@@ -2212,17 +2272,22 @@ function pushNow(){
   if(!cloud.ref || !cloud.user) return Promise.resolve();
   clearTimeout(cloud.timer); cloud.timer = null;
   if(cloud.pushing) return cloud.pushing.then(function(){ return state.meta.localRev > state.meta.syncedRev ? pushNow() : null; });
+  if(syncSig() === lastSig && state.meta.localRev <= state.meta.syncedRev){ markSynced(); return Promise.resolve(); }   /* nothing new to send */
   var rev = state.meta.localRev, payload = syncPayload();
   if(JSON.stringify(payload).length > 950000){ setCloud('offline', 'Your data is larger than one Firestore document allows (1 MiB). It is still saved on this device.'); return Promise.resolve(); }
   payload.rev = rev; payload.writer = DEVICE; payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   cloud.inflightRev = rev;
   setCloud('syncing', '');
   var ref = cloud.ref;
+  /* a write the network never acknowledges must not leave the badge on "Syncing…" forever */
+  var slow = setTimeout(function(){ if(cloud.pushing && cloud.status === 'syncing') setCloud('offline', 'Upload is taking too long. Your cards are safe on this device and will finish uploading when the connection recovers.'); }, 15000);
   cloud.pushing = ref.set(payload, {merge:true}).then(function(){
+    clearTimeout(slow);
     state.meta.syncedRev = Math.max(state.meta.syncedRev, rev); persist();
     clearTimeout(cloud.retry);
     if(state.meta.localRev > rev) scheduleSync(); else markSynced();
   }, function(e){
+    clearTimeout(slow);
     setCloud('offline', friendly(e));
     clearTimeout(cloud.retry);
     cloud.retry = setTimeout(function(){ if(cloud.ref && state.meta.localRev > state.meta.syncedRev) pushNow(); }, 30000);
@@ -3170,12 +3235,33 @@ var LEVELS = [
   {name:'Mastery III', min:12500, max:14000, desc:"Able to read and watch nearly anything, meeting only rare unknown words."},
   {name:'Near-Native', min:14000, max:null, desc:"Near-native breadth: vocabulary is no longer a limiting barrier in any content."}
 ];
+/* Immersion Adventure Map: total input hours -> real-world listening/reading comprehension. Each station unlocks when lifetime hours reach its target;
+   min is the previous station's target so the same level maths as the vocabulary map applies. */
+var HOUR_TIER_DATA = [
+  [25, 'Ear Awakening', 'Getting used to the natural speed, rhythm, and tone of native speakers.'],
+  [100, 'Word Catching', 'Individual words stop blending together; you can pick out distinct terms.'],
+  [250, 'Pattern Recognition', 'Daily phrases and frequent sentence endings start making sense without pausing.'],
+  [500, 'Basic Plot Following', 'You can follow the main story in simple shows, vlogs, and animated series.'],
+  [1000, 'Conversational Breakthrough', 'You understand everyday discussions and podcasts without relying on subtitles.'],
+  [1800, 'Natural Flow', 'Watching YouTube, variety shows, and casual TV feels fun instead of mentally exhausting.'],
+  [2800, 'Unassisted Media', 'You can comfortably read novels and follow drama plots with very few dictionary lookups.'],
+  [4000, 'Advanced Comprehension', 'You effortlessly catch jokes, sarcasm, rapid arguments, and different dialects.'],
+  [5200, 'Specialized Fluency', 'News, documentaries, debates, and technical topics feel natural and easy to digest.'],
+  [6400, 'Automatic Thinking', 'Complete immersion: you process thoughts in the target language with zero internal translation.'],
+  [7200, 'Near-Native Intuition', 'You instinctively know what sounds natural, catching subtle cultural nuances effortlessly.'],
+  [8000, 'Complete Native Fluency', 'Effortless, permanent mastery across any medium, speed, or conversation style.']
+];
+var HOUR_TIERS = HOUR_TIER_DATA.map(function(r, i){ return {name:r[1], min:i ? HOUR_TIER_DATA[i - 1][0] : 0, max:r[0], target:r[0], desc:r[2]}; });
+var HOUR_ZONES = ['Ear Training', 'Real Comprehension', 'Native Mastery'];
 var LANG_META = {
   ja:{flag:'🇯🇵', name:'Japanese', short:'JA'},
   ko:{flag:'🇰🇷', name:'Korean', short:'KO'},
   en:{flag:'🇺🇸', name:'English', short:'EN'}
 };
-var mapView = {lang:'ja', sel:-1};
+var mapView = {lang:'ja', sel:-1, mode:'vocab'};
+function mapTiers(){ return mapView.mode === 'hours' ? HOUR_TIERS : LEVELS; }
+function mapTotal(k){ return mapView.mode === 'hours' ? ((state.lifetimeHours && state.lifetimeHours[k]) || 0) : expTotals()[k]; }
+function fmtH1(v){ try{ return Number(v).toLocaleString('en-US', {minimumFractionDigits:1, maximumFractionDigits:1}); }catch(e){ return (Math.round(v * 10) / 10).toFixed(1); } }
 function fmtN(n){ try{ return Number(n).toLocaleString('en-US'); }catch(e){ return String(n); } }
 /* base language ('en'|'ja'|'ko') of a deck: its own tag, else the majority of its cards, else English */
 function deckBase(d){
@@ -3199,13 +3285,13 @@ function masteredCounts(){
   return o;
 }
 function expTotals(){ return masteredCounts(); }      /* words mastered = mastered cards per language, nothing else */
-function levelIndex(total){
-  var i = 0;
-  for(var k = 0; k < LEVELS.length; k++){ if(total >= LEVELS[k].min) i = k; }
+function levelIndex(total, tiers){
+  var i = 0; tiers = tiers || LEVELS;
+  for(var k = 0; k < tiers.length; k++){ if(total >= tiers[k].min) i = k; }
   return i;
 }
-function levelState(total, i){
-  var lv = LEVELS[i];
+function levelState(total, i, tiers){
+  var lv = (tiers || LEVELS)[i];
   if(lv.max !== null && total >= lv.max) return 'done';
   return total >= lv.min ? 'cur' : 'lock';
 }
@@ -3233,7 +3319,7 @@ function renderPills(){
     if(h){
       h.textContent = fmtHrs(hv) + 'h';
       var hb = h.closest ? h.closest('button') : null;
-      if(hb) hb.setAttribute('aria-label', LANG_META[k].name + ': ' + fmtHrs(hv) + ' hours of input. Open ritual portal');
+      if(hb) hb.setAttribute('aria-label', LANG_META[k].name + ': ' + fmtHrs(hv) + ' hours of input. Open immersion map');
     }
   });
   sizeTopCarousel();
@@ -3350,6 +3436,7 @@ function saveGoals(){
   state.reviewTargetsAt = Date.now();
   goalDraft = null;
   save();
+  flushSync();                   /* commit the new goals to the cloud right away */
   triggerHaptic(12);
   closeAnySheet();
   afterTracking(false);          /* a lower goal can complete today's vocabulary step: re-evaluates the day (flames, streak) */
@@ -3368,7 +3455,7 @@ function nodeX(i, W){
   var amp = Math.min(W * 0.3, 118);
   return Math.round(W / 2 + amp * Math.sin(i * 1.12 + 0.35));
 }
-function mapHeight(){ return nodeY(LEVELS.length - 1) + 150; }
+function mapHeight(){ return nodeY(mapTiers().length - 1) + 240; }     /* generous room under station 1 (label + YOU ARE HERE) */
 
 /* ---------- retro 16-bit RPG backdrop: drawn once per size on a tiny canvas, scaled up with nearest-neighbour ----------
    Level 1 sits at the top of the map, so the world runs wasteland -> plains -> forest -> mountains -> dusk clouds -> deep space as you scroll down. */
@@ -3490,16 +3577,123 @@ function paintMapBg(W, H){
   mapBgCache.key = key; mapBgCache.url = url;
   return url;
 }
+/* Immersion Adventure Map backdrop, drawn once into a small canvas and scaled up with crisp pixels (no image assets). Hours climb the map from the
+   bottom: an ancient village (moss hills, pines, thatched huts, amber lanterns, stone path), then a timber-and-brick town with watchtowers and a
+   cobbled road, then a neon midnight skyline under high starlight. A second transparent layer holds some of the neon windows so CSS can flicker them. */
+var cityBgCache = {key:'', url:'', fl:''};
+function paintCityBg(W, H){
+  var key = W + 'x' + H; if(cityBgCache.key === key) return cityBgCache;
+  var url = '', fl = '';
+  try{
+    var cw = Math.max(8, Math.ceil(W / MAP_PX)), ch = Math.max(8, Math.ceil(H / MAP_PX));
+    var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+    var ctx = cv.getContext('2d'), img = ctx.createImageData(cw, ch), px = img.data;
+    var cv2 = document.createElement('canvas'); cv2.width = cw; cv2.height = ch;
+    var ctx2 = cv2.getContext('2d'), img2 = ctx2.createImageData(cw, ch), px2 = img2.data;
+    var seed = 8000;
+    function rnd(){ seed = (seed + 0x6D2B79F5) | 0; var t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    function ri(a, b){ return a + Math.floor(rnd() * (b - a + 1)); }
+    function H2(h){ return hexRgb(h); }
+    function put(buf, x, y, c){ x = Math.round(x); y = Math.round(y); if(x < 0 || y < 0 || x >= cw || y >= ch) return; var o = (y * cw + x) * 4; buf[o] = c[0]; buf[o + 1] = c[1]; buf[o + 2] = c[2]; buf[o + 3] = 255; }
+    function set(x, y, c){ put(px, x, y, c); }
+    function R(a){ return Math.round(a * (ch - 1)); }
+    var BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    /* sky / ground atmosphere: neon midnight at the top, dusk amber in the middle, pine and moss at the bottom */
+    var PAL = ['#04051a', '#080a2a', '#0f0f3a', '#1b1250', '#2e1a5a', '#432660', '#5a3452', '#5c4234', '#3a4228', '#233a24', '#16291a'].map(H2), n = PAL.length - 1, x, y, i, k, dx, dy;
+    for(y = 0; y < ch; y++){
+      var v = y / (ch - 1) * n, i0 = Math.min(n - 1, Math.floor(v)), fr = v - i0;
+      for(x = 0; x < cw; x++) set(x, y, (fr * 16 > BAY[y & 3][x & 3] + .5) ? PAL[i0 + 1] : PAL[i0]);
+    }
+    /* high-altitude starlight (top third) */
+    var SC = ['#dfe5ff', '#9fb4ff', '#c9d4ff'].map(H2), ns = Math.round(cw * R(.34) / 38);
+    for(i = 0; i < ns; i++){ x = ri(0, cw - 1); y = ri(0, R(.34)); if(rnd() > 1 - y / R(.34) * .6) continue; set(x, y, SC[ri(0, 2)]); if(rnd() < .08){ var sg = H2('#5a6bb5'); set(x - 1, y, sg); set(x + 1, y, sg); set(x, y - 1, sg); set(x, y + 1, sg); } }
+    /* ---- modern skyline ---- */
+    var NEON = ['#38e8ff', '#ff4fd8', '#38e8ff', '#9d7bff', '#ffe27a'].map(H2);
+    function skyline(base, hMin, hMax, wMin, wMax, body, edge, wp, flick){
+      var cx = ri(-3, 0), xx, yy, w, h, wc;
+      while(cx < cw){
+        w = ri(wMin, wMax); h = ri(hMin, hMax);
+        for(xx = cx; xx < cx + w; xx++) for(yy = base - h; yy < base + 10; yy++) set(xx, yy, (xx === cx || yy === base - h) ? edge : body);
+        for(yy = base - h + 2; yy < base - 1; yy += 2) for(xx = cx + 1; xx < cx + w - 1; xx += 2){
+          if(rnd() < wp){ wc = NEON[ri(0, NEON.length - 1)]; if(flick && rnd() < .3) put(px2, xx, yy, wc); else set(xx, yy, wc); }
+        }
+        if(rnd() < .22 && h > 8){ var ax = cx + Math.floor(w / 2); for(k = 1; k <= ri(3, 5); k++) set(ax, base - h - k, edge); set(ax, base - h - 5, H2('#ff4a6a')); }
+        cx += w + ri(0, 1);
+      }
+    }
+    skyline(R(.215), 5, 13, 4, 7, H2('#0e1033'), H2('#23266a'), .22, false);
+    skyline(R(.255), 8, 24, 5, 9, H2('#0a0b26'), H2('#2c2f84'), .34, true);
+    /* ---- timber & brick town with watchtowers and a cobbled road ---- */
+    var tb = R(.52), tx = ri(-2, 1);
+    while(tx < cw){
+      var tw = ri(7, 11), wh = ri(4, 6), rh = Math.ceil(tw / 2) + 1, yy2, xx2;
+      for(xx2 = tx; xx2 < tx + tw; xx2++) for(yy2 = tb - wh + 1; yy2 <= tb; yy2++) set(xx2, yy2, ((xx2 - tx) % 3 === 0) ? H2('#3a2616') : H2('#5a3228'));
+      for(k = 0; k < rh; k++) for(xx2 = tx - 1 + k; xx2 <= tx + tw - k; xx2++) set(xx2, tb - wh - k, k % 2 ? H2('#3d2a20') : H2('#2a1a14'));
+      var wx = tx + ri(1, tw - 3); set(wx, tb - 2, H2('#ffb84d')); set(wx + 1, tb - 2, H2('#ffb84d'));
+      tx += tw + ri(1, 3);
+      if(rnd() < .22){
+        var tw2 = 5, th2 = ri(12, 16), tx2 = tx;
+        for(xx2 = tx2; xx2 < tx2 + tw2; xx2++) for(yy2 = tb - th2; yy2 <= tb; yy2++) set(xx2, yy2, ((yy2 + (xx2 & 1)) % 4 === 0) ? H2('#2e2e3c') : H2('#454556'));
+        for(k = 0; k < 3; k++) for(xx2 = tx2 - 1 + k; xx2 <= tx2 + tw2 - k; xx2++) set(xx2, tb - th2 - 1 - k, H2('#2a1a14'));
+        set(tx2 + 2, tb - th2 + 3, H2('#ffb84d')); set(tx2 + 2, tb - th2 + 4, H2('#ffb84d'));
+        tx += tw2 + 2;
+      }
+    }
+    for(y = tb + 1; y <= tb + 6; y++) for(x = 0; x < cw; x++) set(x, y, ((x + (y & 1) * 2) % 4 < 3) ? ((y + x) % 5 === 0 ? H2('#5a544c') : H2('#463f38')) : H2('#241f1b'));
+    /* ---- ancient village ---- */
+    var hb = R(.8), amp = Math.max(5, Math.round(ch * .03)), w1 = rnd() * 6, w2 = rnd() * 6, tops = [], xx3, yy3;
+    for(xx3 = 0; xx3 < cw; xx3++){
+      var hh = Math.sin(xx3 / 6 + w1) * .55 + Math.sin(xx3 / 2.7 + w2) * .25 + (rnd() - .5) * .25, top = Math.round(hb - (hh + 1) * amp / 2); tops.push(top);
+      for(yy3 = top; yy3 < ch; yy3++) set(xx3, yy3, yy3 === top ? H2('#3f7a45') : (BAY[yy3 & 3][xx3 & 3] < 5 && yy3 < top + 3 ? H2('#245232') : H2('#173a24')));
+    }
+    for(xx3 = 2; xx3 < cw - 2; xx3 += ri(4, 8)){
+      var pt = ri(5, 9), p0 = tops[xx3], rr2;
+      for(rr2 = 0; rr2 < pt; rr2++){ var pw = Math.floor(rr2 * .5); for(dx = -pw; dx <= pw; dx++) set(xx3 + dx, p0 - pt + rr2 + 1, (dx < 0 && rr2 % 2 === 0) ? H2('#1c4a2c') : H2('#0f2a1a')); }
+      set(xx3, p0 + 1, H2('#2a1c10'));
+    }
+    var vb = R(.875), vx = ri(1, 4);
+    while(vx < cw - 8){
+      var hw = ri(7, 9), hht = ri(4, 5), rof = Math.ceil(hw / 2) + 1, xa, ya;
+      for(xa = vx; xa < vx + hw; xa++) for(ya = vb - hht + 1; ya <= vb; ya++) set(xa, ya, (xa - vx) % 2 ? H2('#4a3320') : H2('#3b2918'));
+      for(k = 0; k < rof; k++) for(xa = vx - 1 + k; xa <= vx + hw - k; xa++) set(xa, vb - hht - k, k % 2 ? H2('#9a7a36') : H2('#7a5e2a'));
+      set(vx + 2, vb - 1, H2('#ffb347')); set(vx + 2, vb, H2('#ffb347'));
+      vx += hw + ri(3, 6);
+    }
+    var LP = H2('#ffb347'), LH = H2('#8a5a22');
+    for(i = 0; i < Math.max(3, Math.round(cw / 14)); i++){
+      var lx = ri(2, cw - 3), ly = ri(R(.9), R(.97));
+      for(k = 0; k < 4; k++) set(lx, ly + k, H2('#3a2a1c'));
+      set(lx, ly - 1, LP); set(lx + 1, ly - 1, LP); set(lx, ly - 2, LP); set(lx + 1, ly - 2, LP);
+      [[-1, -1], [2, -1], [-1, -2], [2, -2], [0, -3], [1, -3], [0, 0], [1, 0]].forEach(function(o){ if(BAY[(ly + o[1]) & 3][(lx + o[0]) & 3] < 8) set(lx + o[0], ly + o[1], LH); });
+    }
+    /* meadow floor: the moss simply deepens toward the bottom edge (no separate paving block), with a few grass tufts and pebbles */
+    var MG = [H2('#173a24'), H2('#12301d'), H2('#0f2718')], gy0 = R(.9);
+    for(y = gy0; y < ch; y++){ var gf = (y - gy0) / Math.max(1, ch - 1 - gy0) * 2, gi = Math.min(1, Math.floor(gf)), gr = gf - gi; for(x = 0; x < cw; x++) set(x, y, (gr * 16 > BAY[y & 3][x & 3] + .5) ? MG[gi + 1] : MG[gi]); }
+    for(i = 0; i < Math.round(cw * (ch - gy0) / 90); i++){
+      var gx = ri(1, cw - 2), gyy = ri(gy0, ch - 2);
+      if(rnd() < .6){ set(gx, gyy, H2('#2f6a3a')); set(gx, gyy - 1, H2('#2f6a3a')); set(gx + 1, gyy, H2('#245a30')); }
+      else { set(gx, gyy, H2('#4a4f58')); set(gx + 1, gyy, H2('#363a44')); }
+    }
+    for(i = 0; i < Math.round(cw / 10); i++) set(ri(0, cw - 1), ri(R(.8), R(.95)), H2('#d9ff7a'));
+    ctx.putImageData(img, 0, 0); url = cv.toDataURL('image/png');
+    ctx2.putImageData(img2, 0, 0); fl = cv2.toDataURL('image/png');
+  }catch(e){ url = ''; fl = ''; try{ window.__twiBgErr = String(e && e.stack || e); }catch(_){} }
+  cityBgCache.key = key; cityBgCache.url = url; cityBgCache.fl = fl;
+  return cityBgCache;
+}
 function renderMap(recenter){
-  var L = mapView.lang, t = expTotals(), tot = t[L], cur = levelIndex(tot);
+  var HR = mapView.mode === 'hours', TI = mapTiers(), ZN = HR ? HOUR_ZONES : ZONES;
+  var L = mapView.lang, tot = mapTotal(L), cur = levelIndex(tot, TI);
+  var ttl = $('#mapTitle'); if(ttl) ttl.textContent = HR ? 'Immersion Adventure Map' : 'Language Expedition Map';
   LANG_ORDER.forEach(function(k){
     var tab = $('#mtab-' + k), n = $('#mtot-' + k);
-    if(n) n.textContent = fmtN(t[k]);
+    if(n) n.textContent = HR ? fmtH1(mapTotal(k)) + 'h' : fmtN(mapTotal(k));
     if(tab){ tab.classList.toggle('is-on', k === L); tab.setAttribute('aria-selected', k === L ? 'true' : 'false'); }
   });
-  el.mapStats.innerHTML = '<b>' + esc(LANG_META[L].name) + '</b> &middot; Lv. ' + (cur + 1) + ' ' + esc(LEVELS[cur].name);
+  el.mapStats.innerHTML = '<b>' + esc(LANG_META[L].name) + '</b> &middot; ' + (HR ? fmtH1(tot) + ' hrs &middot; ' : '') + 'Lv. ' + (cur + 1) + ' ' + esc(TI[cur].name);
   var W = el.mapScroll.clientWidth || 360, H = mapHeight(), i, out = [];
-  var pts = LEVELS.map(function(_, k){ return {x:nodeX(k, W), y:nodeY(k)}; });
+  var NT = TI.length;     /* both maps climb: station 1 sits at the bottom (village), the last at the top (skyline) */
+  var pts = TI.map(function(_, k){ return {x:nodeX(k, W), y:nodeY(NT - 1 - k)}; });
   /* background constellation */
   var seed = 7, stars = [];
   for(i = 0; i < 34; i++){
@@ -3509,41 +3703,43 @@ function renderMap(recenter){
     void sr;      /* stars now live in the pixel backdrop */
   }
   var base = [], lit = [];
-  for(i = 0; i < LEVELS.length - 1; i++){
+  for(i = 0; i < TI.length - 1; i++){
     var a = pts[i], b = pts[i + 1], dy = b.y - a.y;
     var d = 'M' + a.x + ' ' + a.y + ' C' + a.x + ' ' + (a.y + dy * 0.55) + ' ' + b.x + ' ' + (b.y - dy * 0.55) + ' ' + b.x + ' ' + b.y;
-    var f = tot >= LEVELS[i + 1].min ? 1 : (i === cur ? Math.max(0, Math.min(1, (tot - LEVELS[i].min) / (LEVELS[i].max - LEVELS[i].min))) : 0);
+    var f = tot >= TI[i + 1].min ? 1 : (i === cur ? Math.max(0, Math.min(1, (tot - TI[i].min) / (TI[i].max - TI[i].min))) : 0);
     base.push('<path class="mpath-shadow" d="' + d + '"/><path class="mpath-base" d="' + d + '"/>');
     if(f > 0) lit.push('<path class="mpath-lit" d="' + d + '" pathLength="1" stroke-dasharray="' + f.toFixed(4) + ' 2"/>');
   }
   out.push('<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><defs><linearGradient id="mgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2d9c8"/><stop offset="1" stop-color="#fcd34d"/></linearGradient></defs>' +
     stars.join('') + base.join('') + lit.join('') + '</svg>');
   /* zone headings */
-  for(var z = 0; z < ZONES.length; z++){
-    var first = z * 4, zy = z === 0 ? nodeY(0) - 78 : (nodeY(first - 1) + nodeY(first)) / 2;
-    out.push('<div class="mzone' + (tot < LEVELS[first].min ? ' is-lock' : '') + '" style="top:' + zy + 'px"><span>ZONE ' + ZONE_ROMAN[z] + ' &middot; ' + esc(ZONES[z].toUpperCase()) + '</span></div>');
+  for(var z = 0; z < ZN.length; z++){
+    var first = z * 4, zy = (z === ZN.length - 1 ? pts[NT - 1].y - 78 : (pts[first + 3].y + pts[first + 4].y) / 2);
+    out.push('<div class="mzone' + (tot < TI[first].min ? ' is-lock' : '') + '" style="top:' + zy + 'px"><span>ZONE ' + ZONE_ROMAN[z] + ' &middot; ' + esc(ZN[z].toUpperCase()) + '</span></div>');
   }
   /* stations */
-  for(i = 0; i < LEVELS.length; i++){
-    var lv = LEVELS[i], st = levelState(tot, i), p = pts[i];
+  for(i = 0; i < TI.length; i++){
+    var lv = TI[i], st = levelState(tot, i, TI), p = pts[i];
     var inner = st === 'done' ? icon('check', 26) : st === 'cur' ? String(i + 1) : icon('lock', 20);
-    var cnt = lv.min === 0 ? 'Start' : fmtN(lv.min) + ' words';
-    var status = st === 'done' ? 'conquered' : st === 'cur' ? 'current station' : 'locked';
+    var cnt = HR ? fmtN(lv.target) + ' hrs' : (lv.min === 0 ? 'Start' : fmtN(lv.min) + ' words');
+    var status = st === 'done' ? (HR ? 'unlocked' : 'conquered') : st === 'cur' ? 'current station' : 'locked';
     out.push('<button class="mnode is-' + st + (mapView.sel === i ? ' is-sel' : '') + '" style="left:' + p.x + 'px;top:' + p.y + 'px" data-action="map-node" data-lv="' + i + '" aria-label="Level ' + (i + 1) + ', ' + esc(lv.name) + ', ' + status + '">' +
       (st === 'cur' ? '<span class="radar"></span><span class="radar r2"></span><span class="mpin">YOU ARE HERE</span>' : '') +
       '<span class="disc">' + inner + '</span>' +
       '<span class="mlabel"><b>' + esc(lv.name) + '</b><small>' + cnt + '</small></span></button>');
   }
   el.mapTrack.style.height = H + 'px';
-  var bgUrl = paintMapBg(W, H);
-  if(bgUrl){ el.mapTrack.style.backgroundImage = 'linear-gradient(rgba(0,0,0,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.2) 1px,transparent 1px),url(' + bgUrl + ')'; }
+  if(el.mapSheet.classList) el.mapSheet.classList.add('theme-twilight');
+  var cityBg = paintCityBg(W, H), bgUrl = cityBg.url;
+  if(cityBg.fl) out.unshift('<div class="city-flicker" style="background-image:url(' + cityBg.fl + ')" aria-hidden="true"></div>');
+  if(bgUrl){ el.mapTrack.style.backgroundImage = 'linear-gradient(rgba(150,170,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(150,170,255,.05) 1px,transparent 1px),url(' + bgUrl + ')'; }
   el.mapTrack.innerHTML = out.join('');
   renderInspect();
-  if(recenter) centerOnCurrent(cur, H);
+  if(recenter) centerOnCurrent(cur, H, pts[cur].y);
 }
-function centerOnCurrent(cur, H){
+function centerOnCurrent(cur, H, ny){
   var sc = el.mapScroll, ch = sc.clientHeight || 500;
-  var target = Math.max(0, Math.min(Math.max(0, H - ch), nodeY(cur) - ch * 0.5));
+  var target = Math.max(0, Math.min(Math.max(0, H - ch), (ny === undefined ? nodeY(cur) : ny) - ch * 0.5));
   var go = function(){
     try{
       if(REDUCED || typeof sc.scrollTo !== 'function'){ sc.scrollTop = target; return; }
@@ -3556,7 +3752,21 @@ function centerOnCurrent(cur, H){
 function renderInspect(){
   var i = mapView.sel;
   if(i < 0){ el.inspect.hidden = true; el.inspect.innerHTML = ''; return; }
-  var L = mapView.lang, tot = expTotals()[L], lv = LEVELS[i], st = levelState(tot, i), pct, rem;
+  var L = mapView.lang, TI = mapTiers(), tot = mapTotal(L), lv = TI[i], st = levelState(tot, i, TI), pct, rem;
+  if(mapView.mode === 'hours'){
+    pct = Math.max(0, Math.min(100, Math.floor(tot / lv.target * 100)));
+    rem = st === 'done' ? 'Milestone unlocked &middot; <b>' + fmtH1(tot - lv.target) + '</b> hrs beyond it' : '<b>' + fmtH1(lv.target - tot) + '</b> hrs remaining to unlock this station';
+    var hchip = st === 'done' ? '<span class="chip done">' + icon('check', 12) + 'Unlocked</span>' : st === 'cur' ? '<span class="chip cur">In Progress</span>' : '<span class="chip lock">' + icon('lock', 12) + 'Locked</span>';
+    el.inspect.innerHTML =
+      '<div class="ins-top"><div><div class="ins-title">' + esc(lv.name) + ' &middot; ' + fmtN(lv.target) + ' hrs</div><div class="ins-range">Station ' + (i + 1) + ' of ' + TI.length + ' &middot; ' + fmtH1(tot) + ' / ' + fmtH1(lv.target) + ' hrs</div></div>' +
+      '<button class="icon-btn" data-action="map-inspect-close" aria-label="Close details"><span>' + icon('x', 22) + '</span></button></div>' +
+      '<div>' + hchip + '</div>' +
+      '<div class="ins-lbl">What it feels like</div><div class="ins-desc">' + esc(lv.desc) + '</div>' +
+      '<div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="ins-rem">' + pct + '% &middot; ' + rem + '</div>';
+    el.inspect.hidden = false;
+    return;
+  }
   if(st === 'done'){ pct = 100; rem = 'Milestone conquered &middot; <b>' + fmtN(tot - lv.max) + '</b> words beyond it'; }
   else if(st === 'cur'){
     if(lv.max === null){ pct = 100; rem = 'Final station reached &middot; <b>' + fmtN(tot - lv.min) + '</b> words beyond the summit gate'; }
@@ -3580,8 +3790,9 @@ function selectNode(i){
   });
   renderInspect();
 }
-function openMap(trigger, lang){
+function openMap(trigger, lang, mode){
   lastFocus = trigger || document.activeElement;
+  mapView.mode = mode === 'hours' ? 'hours' : 'vocab';
   if(LANG_META[lang]) mapView.lang = lang;
   mapView.sel = -1;
   el.mapSheet.hidden = false;
@@ -4081,6 +4292,7 @@ function saveTarget(){
   el.targetSheet.hidden = true;
   toast(ALT_META[k].name + ' target: ' + fmtHrs(tgt.min / 60) + ' hrs a day');
   afterTracking(false);
+  flushSync();
   if(!el.portal.hidden){ try{ $('#portalTargetBtn').focus(); }catch(e){} }
 }
 el.targetSheet.addEventListener('click', function(e){ if(e.target === el.targetSheet) closeTargetSheet(); });
@@ -4180,6 +4392,7 @@ document.addEventListener('click', function(e){
     case 'target-set': tgt.min = Math.round(Number(t.getAttribute('data-h')) * 60); renderTargetSheet(); break;
     case 'target-save': saveTarget(); break;
     case 'open-map': openMap(t, t.getAttribute('data-lang')); break;
+    case 'open-hours-map': openMap(t, t.getAttribute('data-lang'), 'hours'); break;
     case 'map-lang': setMapLang(t.getAttribute('data-lang')); break;
     case 'map-node': selectNode(Number(t.getAttribute('data-lv'))); break;
     case 'map-inspect-close': selectNode(mapView.sel); break;
@@ -4195,7 +4408,7 @@ document.addEventListener('click', function(e){
     case 'study-deck': showTab('study'); break;
     case 'deck-portal': showTab('altar'); openPortal(t, t.getAttribute('data-lang')); break;
     case 'open-deck': if(did){ manageDeckId = did; disarm(); renderManage(); } break;
-    case 'back-decks': manageDeckId = null; disarm(); renderManage(); break;
+    case 'back-decks': triggerHaptic('light'); manageDeckId = null; disarm(); renderManage(); try{ var scr = document.querySelector('.screen.active') || document.querySelector('.screen:not([hidden])'); if(scr) scr.scrollTop = 0; window.scrollTo(0,0); }catch(_){} break;
     case 'delete-deck':
       if(!did) break;
       if(Date.now() - delDoneAt < 700) break;          /* the release that ends a completed hold */
